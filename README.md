@@ -63,7 +63,36 @@ source utils.sh
 ## 文件说明
 - `utils.sh` - 工具函数集合
 - `example.sh` - 使用示例
+- `deploy-to-github.sh` - 一键部署到 GitHub 脚本
 - `README.md` - 项目说明文档
+
+## 部署到 GitHub
+
+### 一键部署（推荐）
+
+使用提供的部署脚本可以快速将项目推送到 GitHub：
+
+```bash
+./deploy-to-github.sh
+```
+
+脚本会自动：
+- 检查并安装 GitHub CLI（如需要）
+- 引导您完成 GitHub 登录
+- 创建仓库并推送代码
+
+### 手动部署
+
+如果您想手动部署，执行以下步骤：
+
+1. 在 GitHub 上创建新仓库（不初始化 README、.gitignore 或 LICENSE）
+2. 在本地仓库目录执行：
+
+```bash
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+git branch -M main
+git push -u origin main
+```
 
 ## 许可证
 MIT
