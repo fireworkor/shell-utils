@@ -367,12 +367,41 @@ def software_status():
 
 @app.route('/api/software/info')
 def get_software_info():
-    """获取所有软件的详细信息"""
+    """获取所有软件的详细信息，自动同步可用软件"""
+    sync_software_info()
     conn = get_db()
     rows = conn.execute('SELECT * FROM software_info ORDER BY name').fetchall()
     conn.close()
     result = [dict(row) for row in rows]
     return jsonify(result)
+
+def sync_software_info():
+    """将脚本目录中所有可用软件同步到数据库（不覆盖已有信息）"""
+    # 获取所有可用软件
+    available = []
+    for item in os.listdir(SCRIPT_DIR):
+        item_path = os.path.join(SCRIPT_DIR, item)
+        if os.path.isdir(item_path) and item not in ['lib', 'config', 'uninstall', 'examples', 
+                                                      'security-baseline', 'kubernetes', 
+                                                      'docker-compose-templates', 'docker-manager',
+                                                      'webui', 'healthcheck', 'backup']:
+            script_file = os.path.join(item_path, f'{item}.sh')
+            if os.path.isfile(script_file):
+                available.append(item)
+    
+    conn = get_db()
+    for name in available:
+        # 检查是否已存在
+        row = conn.execute('SELECT name FROM software_info WHERE name = ?', (name,)).fetchone()
+        if not row:
+            # 自动插入，使用默认值
+            display_name = name.replace('-', ' ').replace('_', ' ').title()
+            conn.execute('''
+                INSERT OR IGNORE INTO software_info (name, display_name, ports, username, password, config_path, log_path, description, notes)
+                VALUES (?, ?, '', '', '', '', '', '', '')
+            ''', (name, display_name))
+    conn.commit()
+    conn.close()
 
 @app.route('/api/software/info/<name>')
 def get_software_detail(name):
