@@ -507,7 +507,7 @@ def backup():
     except subprocess.TimeoutExpired:
         return jsonify({'success': False, 'error': '备份超时'})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/restore', methods=['POST'])
 def restore():
