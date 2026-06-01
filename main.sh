@@ -54,6 +54,8 @@ ${YELLOW}数据库：${NC}
   sqlite            安装 SQLite
   elasticsearch     安装 Elasticsearch
   clickhouse        安装 ClickHouse
+  cassandra         安装 Cassandra
+  influxdb          安装 InfluxDB
 
 ${YELLOW}编程语言：${NC}
   php [版本]        安装 PHP (默认: 8.0)
@@ -80,6 +82,8 @@ ${YELLOW}运维工具：${NC}
   backup            备份数据库
   cleanup           系统清理
   tune-kernel       内核调优
+  mirror [源]       设置镜像源
+  firewall          防火墙管理
 
 ${YELLOW}一键部署：${NC}
   lnmp              LNMP 栈
@@ -405,6 +409,12 @@ main() {
         clickhouse)
             install_software clickhouse
             ;;
+        cassandra)
+            install_software cassandra
+            ;;
+        influxdb)
+            install_software influxdb
+            ;;
         memcached)
             install_software memcached
             ;;
@@ -440,6 +450,12 @@ main() {
             ;;
         tune-kernel|tune_kernel)
             install_software tune-kernel
+            ;;
+        mirror)
+            install_software mirror "$@"
+            ;;
+        firewall)
+            install_software firewall "$@"
             ;;
         lnmp)
             install_lnmp
