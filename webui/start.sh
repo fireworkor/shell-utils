@@ -16,30 +16,38 @@ echo -e "${BLUE}🚀 启动运维工具管理平台...${NC}"
 # 检测操作系统
 detect_os
 
-# 检查并安装 Python3
-if ! command -v python3 &> /dev/null; then
-    echo -e "${YELLOW}📦 安装 Python3...${NC}"
-    pkg_manager=$(get_pkg_manager)
-    case $pkg_manager in
-        dnf|yum)
-            $pkg_manager install -y python3 python3-pip
-            ;;
-        apt)
-            export DEBIAN_FRONTEND=noninteractive
-            apt update
-            apt install -y python3 python3-pip
-            ;;
-        *)
-            echo -e "${RED}❌ 不支持的包管理器，请手动安装 Python3${NC}"
-            exit 1
-            ;;
-    esac
-    print_success "Python3 安装完成"
-fi
+# 检查并安装基础命令
+check_and_install_command() {
+    local cmd=$1
+    local package=$2
+    if ! command -v $cmd &> /dev/null; then
+        echo -e "${YELLOW}📦 安装 $cmd...${NC}"
+        pkg_manager=$(get_pkg_manager)
+        case $pkg_manager in
+            dnf|yum)
+                $pkg_manager install -y $package
+                ;;
+            apt)
+                export DEBIAN_FRONTEND=noninteractive
+                apt update
+                apt install -y $package
+                ;;
+        esac
+    fi
+}
 
-# 确保pip模块可用
+# 检查并安装所有需要的命令
+check_and_install_command python3 python3
+check_and_install_command curl curl
+check_and_install_command kill procps
+check_and_install_command sleep coreutils
+check_and_install_command mkdir coreutils
+check_and_install_command rm coreutils
+check_and_install_command cat coreutils
+
+# 检查并安装 Python3-pip
 if ! python3 -m pip --version &> /dev/null; then
-    echo -e "${YELLOW}📦 安装 pip 模块...${NC}"
+    echo -e "${YELLOW}📦 安装 python3-pip...${NC}"
     pkg_manager=$(get_pkg_manager)
     case $pkg_manager in
         dnf|yum)
