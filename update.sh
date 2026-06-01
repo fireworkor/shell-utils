@@ -14,7 +14,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 REPO_URL="https://github.com/fireworkor/shell-utils.git"
-REPO_BRANCH="main"
+REPO_BRANCH="master"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 log_info() {
@@ -60,17 +60,33 @@ check_dependencies() {
 }
 
 get_current_version() {
+    # 优先从 .version 文件获取
     if [ -f "$SCRIPT_DIR/.version" ]; then
         cat "$SCRIPT_DIR/.version"
+    # 其次从 git 获取
+    elif [ -d "$SCRIPT_DIR/.git" ]; then
+        git -C "$SCRIPT_DIR" describe --tags --always 2>/dev/null || \
+        git -C "$SCRIPT_DIR" log --oneline -1 2>/dev/null | awk '{print $1}'
     else
         echo "unknown"
     fi
 }
 
 get_latest_version() {
+    # 优先从远程 tags 获取
     local latest_tag
-    latest_tag=$(curl -s https://api.github.com/repos/fireworkor/shell-utils/tags | grep '"name"' | head -1 | awk -F'"' '{print $4}')
-    echo "${latest_tag:-unknown}"
+    latest_tag=$(curl -s --connect-timeout 10 https://api.github.com/repos/fireworkor/shell-utils/tags 2>/dev/null | grep '"name"' | head -1 | awk -F'"' '{print $4}')
+    
+    if [ -n "$latest_tag" ]; then
+        echo "$latest_tag"
+        return
+    fi
+    
+    # 如果没有 tag，从远程分支最新 commit 获取
+    local latest_commit
+    latest_commit=$(curl -s --connect-timeout 10 "https://api.github.com/repos/fireworkor/shell-utils/commits/${REPO_BRANCH}" 2>/dev/null | grep '"sha"' | head -1 | awk -F'"' '{print $4}')
+    
+    echo "${latest_commit:-unknown}"
 }
 
 check_for_updates() {

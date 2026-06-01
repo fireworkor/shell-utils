@@ -346,7 +346,57 @@ def backup():
     except subprocess.TimeoutExpired:
         return jsonify({'success': False, 'error': '备份超时'})
     except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}
+
+@app.route('/api/restore', methods=['POST'])
+def restore():
+    data = request.json
+    target = data.get('target', '')
+    backup_file = data.get('backup_file', '')
+    
+    if not target or not backup_file:
+        return jsonify({'success': False, 'error': '请指定恢复目标和备份文件'})
+    
+    try:
+        cmd = [f'{SCRIPT_DIR}/backup/backup.sh', 'restore', target, backup_file]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        return jsonify({
+            'success': result.returncode == 0,
+            'output': result.stdout,
+            'error': result.stderr
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': '恢复超时'})
+    except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/backup/list')
+def backup_list():
+    backup_dir = '/var/backups/shell-utils'
+    backups = {}
+    
+    try:
+        if os.path.isdir(backup_dir):
+            for subdir in os.listdir(backup_dir):
+                sub_path = os.path.join(backup_dir, subdir)
+                if os.path.isdir(sub_path):
+                    files = []
+                    for f in sorted(os.listdir(sub_path), reverse=True):
+                        fpath = os.path.join(sub_path, f)
+                        if os.path.isfile(fpath):
+                            stat = os.stat(fpath)
+                            files.append({
+                                'name': f,
+                                'path': fpath,
+                                'size': round(stat.st_size / 1024, 1),  # KB
+                                'time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(stat.st_mtime))
+                            })
+                    if files:
+                        backups[subdir] = files[:20]  # 最多显示20个
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+    
+    return jsonify({'success': True, 'data': backups})
 
 @app.route('/api/update/check')
 def check_update():
@@ -354,6 +404,52 @@ def check_update():
         result = subprocess.run([f'{SCRIPT_DIR}/update.sh', 'check'], 
                               capture_output=True, text=True)
         return jsonify({'success': True, 'output': result.stdout})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/update/run', methods=['POST'])
+def run_update():
+    try:
+        result = subprocess.run([f'{SCRIPT_DIR}/update.sh', 'update'], 
+                              capture_output=True, text=True, timeout=300,
+                              input='yes\n')
+        success = result.returncode == 0
+        
+        # 升级成功后自动重启WebUI
+        if success:
+            try:
+                pid_file = os.path.join(SCRIPT_DIR, 'webui', 'pid.txt')
+                if os.path.isfile(pid_file):
+                    with open(pid_file) as f:
+                        old_pid = f.read().strip()
+                    if old_pid:
+                        os.kill(int(old_pid), 9)
+                    os.remove(pid_file)
+            except:
+                pass
+            
+            # 延迟重启
+            def restart_webui():
+                time.sleep(2)
+                subprocess.Popen([f'{SCRIPT_DIR}/webui/start.sh'],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            
+            thread = threading.Thread(target=restart_webui)
+            thread.start()
+            
+            return jsonify({
+                'success': True,
+                'output': result.stdout + '\n\n✅ 升级完成，WebUI 正在重启...',
+                'restart': True
+            })
+        
+        return jsonify({
+            'success': False,
+            'output': result.stdout,
+            'error': result.stderr
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': '升级超时'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 

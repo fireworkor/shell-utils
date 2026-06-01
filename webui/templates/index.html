@@ -314,18 +314,47 @@
             <!-- 备份恢复 -->
             <div id="page-backup" class="page" style="display:none">
                 <div class="card">
-                    <div class="card-title">💾 备份管理</div>
+                    <div class="card-title">💾 数据备份</div>
                     <div>
                         <select id="backup-target" style="padding: 10px; width: 200px; margin-right: 12px;">
                             <option value="all">全部备份</option>
                             <option value="mysql">MySQL</option>
                             <option value="mongodb">MongoDB</option>
                             <option value="redis">Redis</option>
-                            <option value="files">文件</option>
+                            <option value="configs">配置文件</option>
                         </select>
                         <button class="btn btn-primary" onclick="runBackup()">执行备份</button>
                     </div>
                     <pre class="output-box" id="backup-output" style="margin-top: 16px;">选择备份目标并点击按钮...</pre>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">📂 备份文件列表</div>
+                    <button class="btn btn-primary" onclick="loadBackupList()" style="margin-bottom: 12px;">刷新列表</button>
+                    <div id="backup-list-container">
+                        <table class="table">
+                            <thead>
+                                <tr><th>类型</th><th>文件名</th><th>大小</th><th>时间</th><th>操作</th></tr>
+                            </thead>
+                            <tbody id="backup-list-body">
+                                <tr><td colspan="5" style="text-align:center;color:#7f8c8d;">点击"刷新列表"加载备份文件</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">🔄 数据恢复</div>
+                    <div>
+                        <select id="restore-target" style="padding: 10px; width: 200px; margin-right: 12px;">
+                            <option value="mysql">MySQL</option>
+                            <option value="mongodb">MongoDB</option>
+                            <option value="redis">Redis</option>
+                        </select>
+                        <input type="text" id="restore-file" placeholder="备份文件路径" style="padding: 10px; width: 400px; margin-right: 12px;">
+                        <button class="btn btn-warning" onclick="runRestore()">执行恢复</button>
+                    </div>
+                    <pre class="output-box" id="restore-output" style="margin-top: 16px;">选择恢复目标、输入备份文件路径后点击恢复...</pre>
                 </div>
             </div>
             
@@ -657,6 +686,71 @@
                 body: JSON.stringify({ target })
             }).then(r => r.json()).then(data => {
                 output.textContent = data.output + (data.error ? '\n错误: ' + data.error : '');
+                if (data.success) loadBackupList();
+            });
+        }
+        
+        function loadBackupList() {
+            const tableBody = document.getElementById('backup-list-body');
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#7f8c8d;">加载中...</td></tr>';
+            
+            fetch('/api/backup/list').then(r => r.json()).then(data => {
+                if (!data.success || !data.data) {
+                    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#7f8c8d;">无备份文件</td></tr>';
+                    return;
+                }
+                
+                tableBody.innerHTML = '';
+                for (const [type, files] of Object.entries(data.data)) {
+                    files.forEach(file => {
+                        tableBody.innerHTML += `
+                            <tr>
+                                <td><span class="status-badge status-active">${type}</span></td>
+                                <td style="font-size:12px;word-break:break-all;">${file.name}</td>
+                                <td>${file.size} KB</td>
+                                <td>${file.time}</td>
+                                <td>
+                                    <button class="btn btn-warning" style="padding:4px 10px;font-size:12px;" 
+                                        onclick="selectRestore('${type}', '${file.path}')">选择恢复</button>
+                                </td>
+                            </tr>`;
+                    });
+                }
+                
+                if (!tableBody.innerHTML) {
+                    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#7f8c8d;">无备份文件</td></tr>';
+                }
+            });
+        }
+        
+        function selectRestore(type, filePath) {
+            document.getElementById('restore-target').value = type;
+            document.getElementById('restore-file').value = filePath;
+            showModal('已选择', `恢复类型: ${type}\n备份文件: ${filePath}\n\n请在恢复区域点击"执行恢复"`);
+        }
+        
+        function runRestore() {
+            const target = document.getElementById('restore-target').value;
+            const backupFile = document.getElementById('restore-file').value;
+            const output = document.getElementById('restore-output');
+            
+            if (!backupFile) {
+                showModal('错误', '请输入或选择备份文件路径');
+                return;
+            }
+            
+            if (!confirm('确定要恢复数据吗？此操作可能会覆盖现有数据！')) {
+                return;
+            }
+            
+            output.textContent = `正在恢复 ${target}...`;
+            
+            fetch('/api/restore', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: target, backup_file: backupFile })
+            }).then(r => r.json()).then(data => {
+                output.textContent = data.output + (data.error ? '\n错误: ' + data.error : '');
             });
         }
         
@@ -665,16 +759,30 @@
             output.textContent = '正在检查更新...';
             
             fetch('/api/update/check').then(r => r.json()).then(data => {
-                output.textContent = data.output;
+                output.textContent = data.output + (data.error ? '\n错误: ' + data.error : '');
             });
         }
         
         function runUpdate() {
             const output = document.getElementById('update-output');
-            output.textContent = '正在执行升级...';
             
-            fetch('/api/update', { method: 'POST' }).then(r => r.json()).then(data => {
-                output.textContent = data.output + (data.error ? '\n错误: ' + data.error : '');
+            if (!confirm('确定要执行脚本升级吗？升级完成后 WebUI 将自动重启。')) {
+                return;
+            }
+            
+            output.textContent = '正在执行升级（自动确认）...\n';
+            
+            fetch('/api/update/run', { method: 'POST' }).then(r => r.json()).then(data => {
+                output.textContent += data.output + (data.error ? '\n错误: ' + data.error : '');
+                
+                if (data.restart) {
+                    output.textContent += '\n\n⏳ WebUI 正在重启，请等待约 10 秒后刷新页面...';
+                    setTimeout(function() {
+                        output.textContent += '\n🔄 请刷新页面 (F5) 以加载新版本';
+                    }, 8000);
+                }
+            }).catch(err => {
+                output.textContent += '\n请求失败: ' + err.message;
             });
         }
         
