@@ -95,16 +95,26 @@ ${YELLOW}大数据组件:${NC}
   flume [mode]      - 部署 Flume (install/start/status)
   zeppelin [mode]   - 部署 Zeppelin (install/start/stop/restart/status)
 
+${YELLOW}负载均衡与高可用：${NC}
+  haproxy          安装 HAProxy 负载均衡
+  keepalived       安装 Keepalived 高可用
+
 ${YELLOW}一键部署：${NC}
   lnmp              LNMP 栈
   lamp              LAMP 栈
   dev-tools         开发工具
   bigdata           大数据组件栈
+  nginx-deploy      Nginx 网站一键部署
 
 ${YELLOW}集群部署：${NC}
   redis-cluster     Redis 集群部署
   mysql-cluster     MySQL 主从集群
   mongodb-cluster   MongoDB 副本集
+  postgresql-cluster PostgreSQL 主从集群
+  kafka-cluster     Kafka 集群 (含Zookeeper)
+  zookeeper-cluster Zookeeper 集群
+  elasticsearch-cluster Elasticsearch 集群
+  rabbitmq-cluster  RabbitMQ 集群
 
 ${YELLOW}健康检查与备份：${NC}
   healthcheck       运行健康检查
@@ -522,6 +532,30 @@ main() {
             ;;
         mongodb-cluster)
             bash "$SCRIPT_DIR/mongodb-cluster/mongodb-cluster.sh" "$@"
+            ;;
+        postgresql-cluster)
+            bash "$SCRIPT_DIR/postgresql-cluster/postgresql-cluster.sh" "$@"
+            ;;
+        kafka-cluster)
+            bash "$SCRIPT_DIR/kafka-cluster/kafka-cluster.sh" "$@"
+            ;;
+        zookeeper-cluster)
+            bash "$SCRIPT_DIR/zookeeper-cluster/zookeeper-cluster.sh" "$@"
+            ;;
+        elasticsearch-cluster)
+            bash "$SCRIPT_DIR/elasticsearch-cluster/elasticsearch-cluster.sh" "$@"
+            ;;
+        rabbitmq-cluster)
+            bash "$SCRIPT_DIR/rabbitmq-cluster/rabbitmq-cluster.sh" "$@"
+            ;;
+        haproxy)
+            bash "$SCRIPT_DIR/haproxy/haproxy.sh" "$@"
+            ;;
+        keepalived)
+            bash "$SCRIPT_DIR/keepalived/keepalived.sh" "$@"
+            ;;
+        nginx-deploy)
+            bash "$SCRIPT_DIR/nginx-deploy/nginx-deploy.sh" "$@"
             ;;
         healthcheck)
             bash "$SCRIPT_DIR/healthcheck/healthcheck.sh" "$@"
