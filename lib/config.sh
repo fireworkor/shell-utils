@@ -1,57 +1,34 @@
 #!/bin/bash
-
-# =========================================
 # 配置管理
-# =========================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/../config/versions.conf"
+CONF_FILE="$SCRIPT_DIR/config/versions.conf"
 
 load_config() {
-    if [ -f "$CONFIG_FILE" ]; then
-        source "$CONFIG_FILE"
-        return 0
-    else
-        return 1
+    if [ -f "$CONF_FILE" ]; then
+        source "$CONF_FILE"
     fi
 }
 
 get_config() {
     local key=$1
-    local default=${2:-""}
-    
-    if load_config; then
-        echo "${!key:-$default}"
-    else
-        echo "$default"
-    fi
+    grep "^$key=" "$CONF_FILE" 2>/dev/null | cut -d'=' -f2
 }
 
 set_config() {
     local key=$1
     local value=$2
-    
-    if [ ! -f "$CONFIG_FILE" ]; then
-        touch "$CONFIG_FILE"
-    fi
-    
-    if grep -q "^${key}=" "$CONFIG_FILE"; then
-        sed -i "s|^${key}=.*|${key}=${value}|" "$CONFIG_FILE"
+    mkdir -p "$(dirname "$CONF_FILE")"
+    if grep -q "^$key=" "$CONF_FILE" 2>/dev/null; then
+        sed -i "s/^$key=.*/$key=$value/" "$CONF_FILE"
     else
-        echo "${key}=${value}" >> "$CONFIG_FILE"
+        echo "$key=$value" >> "$CONF_FILE"
     fi
 }
 
 list_config() {
-    if load_config; then
-        echo -e "${YELLOW}当前配置：${NC}"
-        echo ""
-        grep -E "^[A-Z_]+=" "$CONFIG_FILE" | while read line; do
-            key=$(echo "$line" | cut -d'=' -f1)
-            value=$(echo "$line" | cut -d'=' -f2-)
-            echo -e "  ${GREEN}$key${NC} = $value"
-        done
+    if [ -f "$CONF_FILE" ]; then
+        cat "$CONF_FILE"
     else
-        echo -e "${RED}配置文件不存在${NC}"
+        echo "配置文件不存在"
     fi
 }

@@ -380,7 +380,7 @@ install_prometheus() {
     
     # 移动文件
     mv prometheus-2.45.0.linux-amd64 /opt/prometheus
-    ln -s /opt/prometheus /usr/local/bin/prometheus
+    ln -sf /opt/prometheus/prometheus /usr/local/bin/prometheus
     
     # 创建配置目录
     mkdir -p /etc/prometheus
@@ -401,7 +401,7 @@ After=network.target
 
 [Service]
 User=prometheus
-ExecStart=/usr/local/bin/prometheus/prometheus \
+ExecStart=/usr/local/bin/prometheus \
     --config.file=/etc/prometheus/prometheus.yml \
     --storage.tsdb.path=/var/lib/prometheus/
 Restart=always

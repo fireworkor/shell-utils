@@ -6,6 +6,7 @@
 # =========================================
 
 set -e
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -287,7 +288,7 @@ check_backup_status() {
     log_section "备份状态"
     
     local backup_dir="/var/backups"
-    local recent_backup=$(find "$backup_dir" -type f -name "*.tar.gz" -mtime -7 2>/dev/null | head -1)
+    local recent_backup=$(find "$backup_dir" -type f -name "*.tar.gz" -mtime -7  | head -1) 2>/dev/null
     
     if [ -n "$recent_backup" ]; then
         log_pass "最近一周有备份: $(basename "$recent_backup")"
@@ -340,10 +341,10 @@ send_email() {
     
     if command -v mutt &>/dev/null; then
         echo "$body" | mutt -s "$subject" -a "$REPORT_FILE" "$EMAIL"
-        log_success "报告已发送"
+        log_pass "报告已发送"
     elif command -v mail &>/dev/null; then
         echo "$body" | mail -s "$subject" -A "$REPORT_FILE" "$EMAIL"
-        log_success "报告已发送"
+        log_pass "报告已发送"
     else
         log_warn "未找到邮件客户端，报告已保存到 $REPORT_FILE"
     fi

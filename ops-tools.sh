@@ -100,7 +100,7 @@ After=network.target
 
 [Service]
 User=prometheus
-ExecStart=/usr/local/bin/prometheus/prometheus \
+ExecStart=/usr/local/bin/prometheus \
     --config.file=/etc/prometheus/prometheus.yml \
     --storage.tsdb.path=/var/lib/prometheus/ \
     --web.console.libraries=/opt/prometheus/consoles \
@@ -445,7 +445,10 @@ timestamp=$(date +%Y%m%d_%H%M%S)
 
 if command -v mysqldump &>/dev/null; then
     mkdir -p $DB_BACKUP_DIR/mysql
-    mysqldump --all-databases --single-transaction --quick --lock-tables=false > $DB_BACKUP_DIR/mysql/all_databases_${timestamp}.sql 2>/dev/null
+    # 备份需要密码，请手动输入
+    read -s -p "请输入 MySQL root 密码: " MYSQL_PWD
+    echo
+    mysqldump -uroot -p"" --all-databases --single-transaction --quick --lock-tables=false > $DB_BACKUP_DIR/mysql/all_databases_${timestamp}.sql 2>/dev/null
     gzip $DB_BACKUP_DIR/mysql/all_databases_${timestamp}.sql
 fi
 

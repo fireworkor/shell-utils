@@ -500,9 +500,6 @@ main() {
         ssl)
             install_software ssl "$@"
             ;;
-        backup)
-            install_software backup
-            ;;
         cleanup)
             install_software cleanup
             ;;
@@ -586,9 +583,6 @@ main() {
             ;;
         healthcheck)
             bash "$SCRIPT_DIR/healthcheck/healthcheck.sh" "$@"
-            ;;
-        backup)
-            bash "$SCRIPT_DIR/backup/backup.sh" backup "$@"
             ;;
         restore)
             bash "$SCRIPT_DIR/backup/backup.sh" restore "$@"

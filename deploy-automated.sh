@@ -10,8 +10,54 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 echo -e "${BLUE}========================================${NC}"
+
+# 新增：检查依赖
+check_dependencies() {
+    local missing=""
+    command -v gh &>/dev/null || missing="$missing gh"
+    command -v git &>/dev/null || missing="$missing git"
+    if [ -n "$missing" ]; then
+        echo -e "${RED}缺少依赖:$missing${NC}"
+        exit 1
+    fi
+}
+
+# 新增：初始化 Git 仓库
+init_git_repo() {
+    if [ ! -d .git ]; then
+        echo -e "${YELLOW}初始化 Git 仓库...${NC}"
+        git init
+        git config user.name "Auto Deploy Bot"
+        git config user.email "bot@example.com"
+        git add .
+        git commit -m "Initial commit from deploy script"
+    fi
+}
 echo -e "${BLUE}   自动化 GitHub 部署脚本${NC}"
 echo -e "${BLUE}========================================${NC}"
+
+# 新增：检查依赖
+check_dependencies() {
+    local missing=""
+    command -v gh &>/dev/null || missing="$missing gh"
+    command -v git &>/dev/null || missing="$missing git"
+    if [ -n "$missing" ]; then
+        echo -e "${RED}缺少依赖:$missing${NC}"
+        exit 1
+    fi
+}
+
+# 新增：初始化 Git 仓库
+init_git_repo() {
+    if [ ! -d .git ]; then
+        echo -e "${YELLOW}初始化 Git 仓库...${NC}"
+        git init
+        git config user.name "Auto Deploy Bot"
+        git config user.email "bot@example.com"
+        git add .
+        git commit -m "Initial commit from deploy script"
+    fi
+}
 echo ""
 
 # 检查必要的环境变量

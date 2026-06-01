@@ -217,19 +217,11 @@ EOF
             ;;
     esac
     systemctl start mariadb && systemctl enable mariadb
+    echo -e "${YELLOW}请手动运行安全初始化：${NC}"
+    echo "  sudo mysql_secure_installation"
     
     echo -e "${YELLOW}正在运行 MariaDB 安全初始化...${NC}"
-    mysql_secure_installation << 'MARIADB_EOF'
-
-y
-y
-y
-y
-y
-y
-y
-MARIADB_EOF
-    
+        
     echo -e "${GREEN}✓ MariaDB 安装完成${NC}"
 }
 
