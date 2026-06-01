@@ -11,6 +11,8 @@ import subprocess
 import json
 import re
 import sqlite3
+import hmac
+import hashlib
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_socketio import SocketIO, emit
 import threading
@@ -807,6 +809,121 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     print('Client disconnected')
+
+# =========================================
+# CI/CD GitHub Webhook
+# =========================================
+
+# GitHub Webhook Secret，请设置环境变量 WEBHOOK_SECRET 或在此修改
+WEBHOOK_SECRET = os.environ.get('WEBHOOK_SECRET', 'shell-utils-webhook-secret')
+
+@app.route('/api/webhook/github', methods=['POST'])
+def github_webhook():
+    """接收GitHub Webhook推送事件，自动拉取代码并重启WebUI"""
+    # 验证签名
+    signature = request.headers.get('X-Hub-Signature-256', '')
+    if not verify_github_signature(signature, request.data):
+        return jsonify({'error': '签名验证失败'}), 403
+    
+    payload = request.get_json()
+    if not payload:
+        return jsonify({'error': '无效的请求体'}), 400
+    
+    # 只处理push事件
+    event = request.headers.get('X-GitHub-Event', '')
+    if event != 'push':
+        return jsonify({'message': f'忽略事件类型: {event}'}), 200
+    
+    # 获取推送信息
+    ref = payload.get('ref', '')
+    branch = ref.replace('refs/heads/', '') if ref.startswith('refs/heads/') else ref
+    repo_name = payload.get('repository', {}).get('name', '')
+    pusher = payload.get('pusher', {}).get('name', '')
+    commits = payload.get('commits', [])
+    
+    # 只处理master分支
+    if branch != 'master':
+        return jsonify({'message': f'忽略分支: {branch}，仅处理master分支'}), 200
+    
+    print(f'[Webhook] 收到推送: {repo_name}/{branch} by {pusher}, {len(commits)} 个提交')
+    
+    # 在后台线程中执行部署
+    def deploy():
+        try:
+            # 1. 拉取最新代码
+            print('[Deploy] 开始拉取代码...')
+            result = subprocess.run(
+                ['git', 'pull', 'origin', 'master'],
+                cwd=SCRIPT_DIR,
+                capture_output=True, text=True, timeout=60
+            )
+            if result.returncode != 0:
+                print(f'[Deploy] git pull 失败: {result.stderr}')
+                return
+            
+            print(f'[Deploy] 代码更新成功: {result.stdout.strip()}')
+            
+            # 2. 安装新的Python依赖（如有变化）
+            requirements_file = os.path.join(SCRIPT_DIR, 'webui', 'requirements.txt')
+            if os.path.isfile(requirements_file):
+                subprocess.run(
+                    ['python3', '-m', 'pip', 'install', '-r', requirements_file, '-q'],
+                    capture_output=True, text=True, timeout=120
+                )
+            
+            # 3. 重启WebUI
+            print('[Deploy] 准备重启WebUI...')
+            pid_file = os.path.join(SCRIPT_DIR, 'webui', 'pid.txt')
+            if os.path.isfile(pid_file):
+                try:
+                    with open(pid_file) as f:
+                        old_pid = int(f.read().strip())
+                    os.kill(old_pid, 9)
+                    print(f'[Deploy] 已停止旧进程 PID: {old_pid}')
+                    os.remove(pid_file)
+                except:
+                    pass
+            
+            # 延迟启动新进程
+            import time as t
+            t.sleep(2)
+            start_script = os.path.join(SCRIPT_DIR, 'webui', 'start.sh')
+            subprocess.Popen(
+                ['bash', start_script],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            print('[Deploy] WebUI 重启命令已执行')
+            
+        except Exception as e:
+            print(f'[Deploy] 部署失败: {str(e)}')
+    
+    thread = threading.Thread(target=deploy)
+    thread.start()
+    
+    return jsonify({
+        'success': True,
+        'message': f'部署已触发: {repo_name}/{branch} by {pusher}',
+        'branch': branch,
+        'commits': len(commits)
+    })
+
+def verify_github_signature(signature, payload):
+    """验证GitHub Webhook HMAC-SHA256签名"""
+    if not WEBHOOK_SECRET or WEBHOOK_SECRET == 'shell-utils-webhook-secret':
+        # 未配置密钥时跳过验证（开发模式）
+        return True
+    
+    if not signature:
+        return False
+    
+    sha_name, signature_hash = signature.split('=', 1)
+    if sha_name != 'sha256':
+        return False
+    
+    mac = hmac.new(WEBHOOK_SECRET.encode('utf-8'), msg=payload, digestmod=hashlib.sha256)
+    expected = 'sha256=' + mac.hexdigest()
+    
+    return hmac.compare_digest(expected, signature_hash)
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
