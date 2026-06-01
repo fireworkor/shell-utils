@@ -1,25 +1,30 @@
 #!/bin/bash
 
 # =========================================
-# Shell 工具 - 总控脚本
+# Shell 工具 - 总控脚本 v2.0
 # 支持 CentOS 7, CentOS 8, Ubuntu 18/20/22
 # =========================================
 
 set -e
 
-# 获取脚本目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# 加载通用函数
 if [ -f "$SCRIPT_DIR/lib/common.sh" ]; then
     source "$SCRIPT_DIR/lib/common.sh"
 fi
 
-# 显示帮助
+if [ -f "$SCRIPT_DIR/lib/logging.sh" ]; then
+    source "$SCRIPT_DIR/lib/logging.sh"
+fi
+
+if [ -f "$SCRIPT_DIR/lib/config.sh" ]; then
+    source "$SCRIPT_DIR/lib/config.sh"
+fi
+
 show_help() {
     cat << EOF
 ${GREEN}========================================${NC}
-${GREEN}   Shell 工具 - 总控脚本${NC}
+${GREEN}   Shell 工具 - 总控脚本 v2.0${NC}
 ${GREEN}========================================${NC}
 
 ${YELLOW}使用方法：${NC}
@@ -29,6 +34,13 @@ ${YELLOW}基础命令：${NC}
   help              显示帮助
   list              列出所有可用脚本
   system-info       显示系统信息
+  status            检查软件安装状态
+  log [行数]        查看安装日志
+
+${YELLOW}安装命令：${NC}
+  install <软件> [版本]   安装软件
+  upgrade <软件>          升级软件
+  uninstall <软件>        卸载软件
 
 ${YELLOW}Web 服务器：${NC}
   nginx             安装 Nginx
@@ -44,7 +56,7 @@ ${YELLOW}数据库：${NC}
   clickhouse        安装 ClickHouse
 
 ${YELLOW}编程语言：${NC}
-  php [版本]        安装 PHP (默认: 7.4)
+  php [版本]        安装 PHP (默认: 8.0)
   python [版本]      安装 Python (默认: 3.11)
   nodejs [版本]      安装 Node.js (默认: 20)
   java [版本]       安装 Java (默认: 11)
@@ -74,96 +86,225 @@ ${YELLOW}一键部署：${NC}
   lamp              LAMP 栈
   dev-tools         开发工具
 
+${YELLOW}配置管理：${NC}
+  config show       显示当前配置
+  config set <key> <value>  设置配置项
+
 ${YELLOW}示例：${NC}
-  $0 nginx
-  $0 php 8.0
-  $0 python 3.11
-  $0 go 1.22
-  $0 rust
-  $0 mongodb
-  $0 rabbitmq
-  $0 elasticsearch
-  $0 ssl example.com
-  $0 lnmp
+  $0 install nginx
+  $0 install php 8.0
+  $0 install python 3.11
+  $0 upgrade nginx
+  $0 uninstall mysql
+  $0 status
+  $0 log 50
 
 EOF
 }
 
-# 列出所有脚本
 list_scripts() {
-    echo -e "${YELLOW}可用脚本：${NC}"
-    echo ""
+    print_header "可用脚本列表"
     
     for dir in "$SCRIPT_DIR"/*/; do
-        if [ -d "$dir" ]; then
+        if [ -d "$dir" ] && [ "$(basename "$dir")" != "lib" ] && [ "$(basename "$dir")" != "config" ] && [ "$(basename "$dir")" != "uninstall" ]; then
             name=$(basename "$dir")
             script_file="$dir${name}.sh"
             
             if [ -f "$script_file" ]; then
                 desc=$(grep -m1 "^#.*描述" "$script_file" | sed 's/^#.*描述：//' || echo "无描述")
-                echo -e "${GREEN}$name${NC} - $desc"
+                
+                if check_installed "$name"; then
+                    version=$(get_installed_version "$name")
+                    echo -e "${GREEN}$name${NC} - $desc ${YELLOW}[已安装: $version]${NC}"
+                else
+                    echo -e "${GREEN}$name${NC} - $desc"
+                fi
             fi
         fi
     done
 }
 
-# 显示系统信息
 show_system_info() {
-    source "$SCRIPT_DIR/lib/common.sh"
-    detect_os
-    
-    echo -e "${GREEN}系统信息：${NC}"
-    echo "  操作系统: $OS $VER"
-    echo "  内核版本: $(uname -r)"
-    echo "  架构: $(uname -m)"
-    echo "  主机名: $(hostname)"
-    echo "  运行时间: $(uptime -p 2>/dev/null || uptime)"
-    echo ""
-    echo "  内存使用:"
-    free -h | awk 'NR==2 {printf "    总计: %s | 已用: %s | 空闲: %s\n", $2, $3, $4}'
-    echo ""
-    echo "  磁盘使用:"
-    df -h | grep -E '^/dev/' | awk '{printf "    %s: %s / %s (使用率: %s)\n", $1, $3, $2, $5}'
+    print_header "系统信息"
+    get_system_info
 }
 
-# 安装单个软件
+show_status() {
+    print_header "软件安装状态"
+    
+    local software_list=(
+        "nginx:nginx"
+        "apache:apache"
+        "php:php"
+        "mysql:mysql"
+        "mariadb:mariadb"
+        "postgresql:postgresql"
+        "redis:redis-server"
+        "docker:docker"
+        "mongodb:mongod"
+        "python:python3"
+        "nodejs:node"
+        "java:java"
+        "go:go"
+    )
+    
+    echo -e "${YELLOW}软件名称          状态          版本${NC}"
+    echo "----------------------------------------"
+    
+    for item in "${software_list[@]}"; do
+        name="${item%%:*}"
+        cmd="${item##*:}"
+        
+        if command -v $cmd &>/dev/null; then
+            version=$(get_installed_version "$name" 2>/dev/null || echo "unknown")
+            printf "%-17s %-14s %s\n" "$name" "${GREEN}已安装${NC}" "$version"
+        else
+            printf "%-17s %-14s\n" "$name" "${RED}未安装${NC}"
+        fi
+    done
+}
+
 install_software() {
     local software=$1
     local version=${2:-""}
+    
+    log_info "开始安装 $software${version:+ ($version)}"
+    
     local script_file="$SCRIPT_DIR/${software}/${software}.sh"
     
     if [ ! -f "$script_file" ]; then
-        echo -e "${RED}错误：未找到脚本 $script_file${NC}"
+        print_error "未找到脚本: $script_file"
+        log_error "脚本不存在: $script_file"
         exit 1
     fi
     
-    echo -e "${GREEN}正在安装 $software${NC}"
+    print_header "安装 $software${version:+ 版本 $version}"
+    
+    check_prerequisites
+    backup_service_configs "$software"
+    
     if [ -n "$version" ]; then
         bash "$script_file" "$version"
     else
         bash "$script_file"
     fi
+    
+    local status=$?
+    if [ $status -eq 0 ]; then
+        log_info "安装成功: $software${version:+ ($version)}"
+        print_success "$software 安装完成"
+    else
+        log_error "安装失败: $software${version:+ ($version)}"
+        print_error "$software 安装失败"
+    fi
+    
+    return $status
 }
 
-# LNMP 安装
+uninstall_software() {
+    local software=$1
+    
+    log_info "开始卸载 $software"
+    
+    local script_file="$SCRIPT_DIR/uninstall/uninstall.sh"
+    
+    if [ ! -f "$script_file" ]; then
+        print_error "未找到卸载脚本: $script_file"
+        exit 1
+    fi
+    
+    if confirm "确定要卸载 $software 吗？"; then
+        print_header "卸载 $software"
+        bash "$script_file" "$software"
+        
+        log_info "卸载完成: $software"
+        print_success "$software 卸载完成"
+    else
+        print_info "取消卸载"
+    fi
+}
+
+upgrade_software() {
+    local software=$1
+    local current_version=""
+    
+    print_header "升级 $software"
+    
+    if ! check_installed "$software"; then
+        print_error "$software 未安装，请先安装"
+        return 1
+    fi
+    
+    current_version=$(get_installed_version "$software" 2>/dev/null || echo "unknown")
+    print_info "当前版本: $current_version"
+    
+    if confirm "是否继续升级？"; then
+        install_software "$software"
+    else
+        print_info "取消升级"
+    fi
+}
+
 install_lnmp() {
-    echo -e "${PURPLE}开始安装 LNMP 栈...${NC}"
+    print_header "安装 LNMP 栈"
+    local total=3
+    local current=1
+    
+    print_step $current $total "安装 Nginx"
     install_software nginx
+    current=$((current + 1))
+    
+    print_step $current $total "安装 MariaDB"
     install_software mariadb
-    install_software php 7.4
-    echo -e "${GREEN}✓ LNMP 栈安装完成！${NC}"
+    current=$((current + 1))
+    
+    print_step $current $total "安装 PHP"
+    install_software php
 }
 
-# LAMP 安装
 install_lamp() {
-    echo -e "${PURPLE}开始安装 LAMP 栈...${NC}"
+    print_header "安装 LAMP 栈"
+    local total=3
+    local current=1
+    
+    print_step $current $total "安装 Apache"
     install_software apache
+    current=$((current + 1))
+    
+    print_step $current $total "安装 MariaDB"
     install_software mariadb
-    install_software php 7.4
-    echo -e "${GREEN}✓ LAMP 栈安装完成！${NC}"
+    current=$((current + 1))
+    
+    print_step $current $total "安装 PHP"
+    install_software php
 }
 
-# 主函数
+handle_config() {
+    local action=$1
+    shift
+    
+    case $action in
+        show)
+            list_config
+            ;;
+        set)
+            local key=$1
+            local value=$2
+            if [ -z "$key" ] || [ -z "$value" ]; then
+                print_error "用法: config set <key> <value>"
+                exit 1
+            fi
+            set_config "$key" "$value"
+            print_success "配置已更新: $key = $value"
+            ;;
+        *)
+            print_error "未知配置操作: $action"
+            echo "用法: config show | config set <key> <value>"
+            exit 1
+            ;;
+    esac
+}
+
 main() {
     if [ $# -eq 0 ]; then
         show_help
@@ -180,8 +321,38 @@ main() {
         list)
             list_scripts
             ;;
-        system-info)
+        system-info|info)
             show_system_info
+            ;;
+        status)
+            show_status
+            ;;
+        log)
+            show_log "${1:-50}"
+            ;;
+        install|i)
+            if [ -z "$1" ]; then
+                print_error "请指定要安装的软件"
+                exit 1
+            fi
+            install_software "$@"
+            ;;
+        uninstall|remove|rm)
+            if [ -z "$1" ]; then
+                print_error "请指定要卸载的软件"
+                exit 1
+            fi
+            uninstall_software "$@"
+            ;;
+        upgrade|update)
+            if [ -z "$1" ]; then
+                print_error "请指定要升级的软件"
+                exit 1
+            fi
+            upgrade_software "$@"
+            ;;
+        config)
+            handle_config "$@"
             ;;
         nginx)
             install_software nginx
@@ -280,7 +451,7 @@ main() {
             install_software dev-tools
             ;;
         *)
-            echo -e "${RED}错误：未知命令 '$command'${NC}"
+            print_error "未知命令: $command"
             echo "运行 '$0 help' 查看帮助"
             exit 1
             ;;
