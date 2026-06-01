@@ -800,19 +800,82 @@ def service_control():
 @app.route('/api/logs/<service>')
 def get_logs(service):
     log_paths = {
-        'nginx': '/var/log/nginx/access.log',
-        'mysql': '/var/log/mariadb/mariadb.log',
-        'system': '/var/log/messages',
+        'nginx': ['/var/log/nginx/access.log', '/var/log/nginx/error.log'],
+        'mysql': ['/var/log/mariadb/mariadb.log', '/var/log/mysql/mysqld.log', '/var/log/mysql.log'],
+        'redis': ['/var/log/redis/redis.log', '/var/log/redis.log'],
+        'php': ['/var/log/php-fpm/error.log', '/var/log/php/error.log'],
+        'docker': ['/var/log/docker.log', '/var/log/containers/*.log'],
+        'mongodb': ['/var/log/mongodb/mongod.log', '/var/log/mongodb.log'],
+        'postgresql': ['/var/log/postgresql/*.log', '/var/log/postgresql.log'],
+        'vsftpd': ['/var/log/xferlog', '/var/log/vsftpd.log'],
+        'samba': ['/var/log/samba/log.smbd', '/var/log/samba/*.log'],
+        'nfs': ['/var/log/nfsd.log', '/var/log/messages'],
+        'sshd': ['/var/log/secure', '/var/log/auth.log'],
+        'crond': ['/var/log/cron', '/var/log/cron.log'],
+        'firewalld': ['/var/log/firewalld'],
+        'system': ['/var/log/messages', '/var/log/syslog'],
+        'webui': [os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs', 'webui.log')],
     }
     
-    log_path = log_paths.get(service, '/var/log/messages')
+    paths = log_paths.get(service, ['/var/log/messages'])
+    
+    # 找到第一个存在的日志文件
+    log_path = None
+    for p in paths:
+        # 支持通配符
+        import glob
+        matches = glob.glob(p)
+        if matches:
+            log_path = matches[0]
+            break
+    
+    if not log_path:
+        return jsonify({'success': False, 'error': f'未找到 {service} 的日志文件'})
     
     try:
-        result = subprocess.run(['tail', '-50', log_path], 
+        result = subprocess.run(['tail', '-100', log_path], 
                               capture_output=True, text=True)
-        return jsonify({'success': True, 'data': result.stdout})
+        return jsonify({'success': True, 'data': result.stdout, 'file': log_path})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/logs/list')
+def list_logs():
+    """获取所有可用的日志类型"""
+    log_services = {
+        'nginx': 'Nginx',
+        'mysql': 'MySQL/MariaDB',
+        'redis': 'Redis',
+        'php': 'PHP-FPM',
+        'docker': 'Docker',
+        'mongodb': 'MongoDB',
+        'postgresql': 'PostgreSQL',
+        'vsftpd': 'FTP (vsftpd)',
+        'samba': 'Samba',
+        'sshd': 'SSH',
+        'crond': 'Cron 定时任务',
+        'firewalld': '防火墙',
+        'system': '系统日志',
+        'webui': 'WebUI 日志',
+    }
+    return jsonify(log_services)
+
+@app.route('/api/healthcheck/options')
+def healthcheck_options():
+    """获取健康检查支持的软件列表"""
+    # 从脚本目录动态获取
+    options = []
+    for item in os.listdir(SCRIPT_DIR):
+        item_path = os.path.join(SCRIPT_DIR, item)
+        if os.path.isdir(item_path) and item not in ['lib', 'config', 'uninstall', 'examples', 
+                                                      'security-baseline', 'kubernetes', 
+                                                      'docker-compose-templates', 'docker-manager',
+                                                      'webui', 'healthcheck', 'backup']:
+            script_file = os.path.join(item_path, f'{item}.sh')
+            if os.path.isfile(script_file):
+                display_name = item.replace('-', ' ').replace('_', ' ').title()
+                options.append({'value': item, 'label': display_name})
+    return jsonify(sorted(options, key=lambda x: x['label']))
 
 @socketio.on('connect')
 def handle_connect():

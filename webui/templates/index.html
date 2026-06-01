@@ -364,11 +364,6 @@
                     <div style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
                         <select id="healthcheck-target" style="padding: 10px; width: 200px;">
                             <option value="all">全部检查</option>
-                            <option value="nginx">Nginx</option>
-                            <option value="mysql">MySQL</option>
-                            <option value="redis">Redis</option>
-                            <option value="php">PHP-FPM</option>
-                            <option value="docker">Docker</option>
                         </select>
                         <button class="btn btn-primary" onclick="runHealthcheck()">开始检查</button>
                         <button class="btn btn-success" onclick="runHealthcheck('all')">一键全部检查</button>
@@ -468,12 +463,13 @@
             <div id="page-logs" class="page" style="display:none">
                 <div class="card">
                     <div class="card-title">📝 日志查看</div>
-                    <select id="log-select" style="padding: 10px; width: 200px; margin-right: 12px;">
-                        <option value="nginx">Nginx 日志</option>
-                        <option value="mysql">MySQL 日志</option>
-                        <option value="system">系统日志</option>
-                    </select>
-                    <button class="btn btn-primary" onclick="getLogs()">查看日志</button>
+                    <div style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                        <select id="log-select" style="padding: 10px; width: 200px;">
+                            <option value="">加载中...</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="getLogs()">查看日志</button>
+                        <button class="btn btn-success" onclick="refreshLogs()">刷新</button>
+                    </div>
                     <pre class="output-box" id="logs-output" style="margin-top: 16px;">选择日志类型并点击按钮...</pre>
                 </div>
             </div>
@@ -651,6 +647,8 @@
             loadServices();
             loadSoftwareGrid();
             loadSoftwareInfo();
+            loadLogOptions();
+            loadHealthcheckOptions();
         }
         
         function loadSystemInfo() {
@@ -1332,10 +1330,42 @@
         function getLogs() {
             const service = document.getElementById('log-select').value;
             const output = document.getElementById('logs-output');
+            if (!service) { output.textContent = '请选择日志类型'; return; }
             output.textContent = `正在获取 ${service} 日志...`;
             
             fetch(`/api/logs/${service}`).then(r => r.json()).then(data => {
-                output.textContent = data.data;
+                if (data.success) {
+                    output.textContent = `📄 文件: ${data.file}\n\n${data.data}`;
+                } else {
+                    output.textContent = `❌ ${data.error}`;
+                }
+            });
+        }
+        
+        function refreshLogs() {
+            const service = document.getElementById('log-select').value;
+            if (!service) return;
+            getLogs();
+        }
+        
+        // 动态加载下拉选项
+        function loadLogOptions() {
+            fetch('/api/logs/list').then(r => r.json()).then(data => {
+                const select = document.getElementById('log-select');
+                select.innerHTML = '';
+                for (const [key, label] of Object.entries(data)) {
+                    select.innerHTML += `<option value="${key}">${label}</option>`;
+                }
+            });
+        }
+        
+        function loadHealthcheckOptions() {
+            fetch('/api/healthcheck/options').then(r => r.json()).then(data => {
+                const select = document.getElementById('healthcheck-target');
+                select.innerHTML = '<option value="all">全部检查</option>';
+                data.forEach(item => {
+                    select.innerHTML += `<option value="${item.value}">${item.label}</option>`;
+                });
             });
         }
         
