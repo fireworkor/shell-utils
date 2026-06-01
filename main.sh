@@ -99,6 +99,17 @@ ${YELLOW}一键部署：${NC}
   lnmp              LNMP 栈
   lamp              LAMP 栈
   dev-tools         开发工具
+  bigdata           大数据组件栈
+
+${YELLOW}集群部署：${NC}
+  redis-cluster     Redis 集群部署
+  mysql-cluster     MySQL 主从集群
+  mongodb-cluster   MongoDB 副本集
+
+${YELLOW}健康检查与备份：${NC}
+  healthcheck       运行健康检查
+  backup [软件]     备份数据 (mysql/mongodb/redis/all)
+  restore [软件]   恢复数据
 
 ${YELLOW}配置管理：${NC}
   config show       显示当前配置
@@ -496,6 +507,30 @@ main() {
             ;;
         lamp)
             install_lamp
+            ;;
+        bigdata)
+            install_software hadoop pseudo
+            install_software spark standalone
+            install_software flink cluster
+            print_success "大数据组件栈部署完成"
+            ;;
+        redis-cluster)
+            bash "$SCRIPT_DIR/redis-cluster/redis-cluster.sh" "$@"
+            ;;
+        mysql-cluster)
+            bash "$SCRIPT_DIR/mysql-cluster/mysql-cluster.sh" "$@"
+            ;;
+        mongodb-cluster)
+            bash "$SCRIPT_DIR/mongodb-cluster/mongodb-cluster.sh" "$@"
+            ;;
+        healthcheck)
+            bash "$SCRIPT_DIR/healthcheck/healthcheck.sh" "$@"
+            ;;
+        backup)
+            bash "$SCRIPT_DIR/backup/backup.sh" backup "$@"
+            ;;
+        restore)
+            bash "$SCRIPT_DIR/backup/backup.sh" restore "$@"
             ;;
         dev-tools)
             install_software dev-tools
