@@ -10,6 +10,7 @@ import os
 import subprocess
 import json
 import re
+import sqlite3
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_socketio import SocketIO, emit
 import threading
@@ -20,6 +21,64 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webui.db')
+
+# =========================================
+# SQLite 数据库初始化
+# =========================================
+
+def get_db():
+    """获取数据库连接"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    """初始化数据库表"""
+    conn = get_db()
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS software_info (
+            name TEXT PRIMARY KEY,
+            display_name TEXT DEFAULT '',
+            ports TEXT DEFAULT '',
+            username TEXT DEFAULT '',
+            password TEXT DEFAULT '',
+            config_path TEXT DEFAULT '',
+            log_path TEXT DEFAULT '',
+            description TEXT DEFAULT '',
+            notes TEXT DEFAULT '',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # 插入默认软件信息（如果不存在）
+    default_software = [
+        ('nginx', 'Nginx', '80, 443', '', '', '/etc/nginx/nginx.conf', '/var/log/nginx/', '高性能Web服务器/反向代理', ''),
+        ('mysql', 'MySQL', '3306', 'root', '', '/etc/my.cnf', '/var/log/mariadb/', '关系型数据库', ''),
+        ('redis', 'Redis', '6379', '', '', '/etc/redis.conf', '/var/log/redis/', '内存键值数据库', ''),
+        ('php', 'PHP', '9000', '', '', '/etc/php.ini', '/var/log/php/', 'PHP运行环境', ''),
+        ('docker', 'Docker', '2375, 2376', '', '', '/etc/docker/daemon.json', '/var/log/docker/', '容器引擎', ''),
+        ('mongodb', 'MongoDB', '27017', '', '', '/etc/mongod.conf', '/var/log/mongodb/', 'NoSQL数据库', ''),
+        ('postgresql', 'PostgreSQL', '5432', 'postgres', '', '/etc/postgresql/', '/var/log/postgresql/', '关系型数据库', ''),
+        ('java', 'Java', '', '', '', '', '', 'Java运行环境', ''),
+        ('nodejs', 'Node.js', '', '', '', '', '', 'JavaScript运行环境', ''),
+        ('go', 'Go', '', '', '', '', '', 'Go语言环境', ''),
+        ('ftp', 'FTP (vsftpd)', '21, 40000-40100', '', '', '/etc/vsftpd/vsftpd.conf', '/var/log/xferlog', 'FTP文件传输服务', ''),
+        ('samba', 'Samba', '139, 445', '', '', '/etc/samba/smb.conf', '/var/log/samba/', 'SMB/CIFS文件共享', ''),
+        ('nfs', 'NFS', '111, 2049', '', '', '/etc/exports', '/var/log/nfs/', '网络文件系统', ''),
+    ]
+    
+    for sw in default_software:
+        conn.execute('''
+            INSERT OR IGNORE INTO software_info (name, display_name, ports, username, password, config_path, log_path, description, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', sw)
+    
+    conn.commit()
+    conn.close()
+
+# 启动时初始化数据库
+init_db()
 
 # 存储安装日志
 install_logs = {}
@@ -301,6 +360,70 @@ def software_status():
                 status_list.append({'name': software, 'status': 'not_installed', 'version': ''})
     
     return jsonify(status_list)
+
+# =========================================
+# 软件详细信息管理（SQLite）
+# =========================================
+
+@app.route('/api/software/info')
+def get_software_info():
+    """获取所有软件的详细信息"""
+    conn = get_db()
+    rows = conn.execute('SELECT * FROM software_info ORDER BY name').fetchall()
+    conn.close()
+    result = [dict(row) for row in rows]
+    return jsonify(result)
+
+@app.route('/api/software/info/<name>')
+def get_software_detail(name):
+    """获取单个软件的详细信息"""
+    conn = get_db()
+    row = conn.execute('SELECT * FROM software_info WHERE name = ?', (name,)).fetchone()
+    conn.close()
+    if row:
+        return jsonify(dict(row))
+    return jsonify({'error': '未找到'}), 404
+
+@app.route('/api/software/info/<name>', methods=['PUT'])
+def update_software_info(name):
+    """更新软件详细信息"""
+    data = request.json
+    conn = get_db()
+    conn.execute('''
+        UPDATE software_info SET
+            display_name = COALESCE(?, display_name),
+            ports = COALESCE(?, ports),
+            username = COALESCE(?, username),
+            password = COALESCE(?, password),
+            config_path = COALESCE(?, config_path),
+            log_path = COALESCE(?, log_path),
+            description = COALESCE(?, description),
+            notes = COALESCE(?, notes),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE name = ?
+    ''', (
+        data.get('display_name'),
+        data.get('ports'),
+        data.get('username'),
+        data.get('password'),
+        data.get('config_path'),
+        data.get('log_path'),
+        data.get('description'),
+        data.get('notes'),
+        name
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/api/software/info/<name>', methods=['DELETE'])
+def delete_software_info(name):
+    """删除软件详细信息"""
+    conn = get_db()
+    conn.execute('DELETE FROM software_info WHERE name = ?', (name,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
 
 @app.route('/api/software/install', methods=['POST'])
 def install_software():

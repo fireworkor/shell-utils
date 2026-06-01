@@ -291,6 +291,22 @@
                         </tbody>
                     </table>
                 </div>
+                
+                <!-- 软件详细信息管理 -->
+                <div class="card">
+                    <div class="card-title">📖 软件使用说明</div>
+                    <p style="color:#7f8c8d;font-size:13px;margin-bottom:12px;">管理各软件的端口、账号密码、配置路径等信息</p>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>软件</th><th>端口</th><th>账号</th><th>密码</th><th>配置路径</th><th>说明</th><th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="software-info-grid">
+                            <tr><td colspan="7" style="text-align:center;color:#7f8c8d;">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
             
             <!-- 健康检查 -->
@@ -531,6 +547,7 @@
             
             loadServices();
             loadSoftwareGrid();
+            loadSoftwareInfo();
         }
         
         function loadSystemInfo() {
@@ -843,6 +860,152 @@
             });
         }
         
+        // =========================================
+        // 软件详细信息管理
+        // =========================================
+        
+        let softwareInfoCache = {};
+        
+        function loadSoftwareInfo() {
+            fetch('/api/software/info').then(r => r.json()).then(data => {
+                softwareInfoCache = {};
+                data.forEach(item => { softwareInfoCache[item.name] = item; });
+                renderSoftwareInfo(data);
+            });
+        }
+        
+        function renderSoftwareInfo(data) {
+            const grid = document.getElementById('software-info-grid');
+            if (!grid) return;
+            
+            if (!data || data.length === 0) {
+                grid.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#7f8c8d;">暂无软件信息</td></tr>';
+                return;
+            }
+            
+            grid.innerHTML = '';
+            data.forEach(sw => {
+                const maskedPwd = sw.password ? '●●●●●●' : '-';
+                grid.innerHTML += `
+                    <tr>
+                        <td><strong>${sw.display_name || sw.name}</strong></td>
+                        <td style="font-size:12px;">${sw.ports || '-'}</td>
+                        <td style="font-size:12px;">${sw.username || '-'}</td>
+                        <td style="font-size:12px;">${maskedPwd}</td>
+                        <td style="font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${sw.config_path || ''}">${sw.config_path || '-'}</td>
+                        <td style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${sw.description || ''}">${sw.description || '-'}</td>
+                        <td>
+                            <button class="btn btn-primary" style="padding:4px 10px;font-size:12px;" 
+                                onclick="editSoftwareInfo('${sw.name}')">编辑</button>
+                        </td>
+                    </tr>`;
+            });
+        }
+        
+        function editSoftwareInfo(name) {
+            const sw = softwareInfoCache[name];
+            if (!sw) {
+                showModal('错误', '未找到软件信息');
+                return;
+            }
+            
+            const formHtml = `
+                <div style="max-height:500px;overflow-y:auto;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;width:100px;">软件名称</td>
+                            <td style="padding:8px;"><input type="text" id="edit-sw-name" value="${sw.display_name || sw.name}" 
+                                style="width:100%;padding:6px;box-sizing:border-box;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;">端口</td>
+                            <td style="padding:8px;"><input type="text" id="edit-sw-ports" value="${sw.ports || ''}" 
+                                style="width:100%;padding:6px;box-sizing:border-box;" placeholder="如: 80, 443"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;">账号</td>
+                            <td style="padding:8px;"><input type="text" id="edit-sw-username" value="${sw.username || ''}" 
+                                style="width:100%;padding:6px;box-sizing:border-box;" placeholder="用户名"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;">密码</td>
+                            <td style="padding:8px;">
+                                <input type="password" id="edit-sw-password" value="${sw.password || ''}" 
+                                    style="width:100%;padding:6px;box-sizing:border-box;" placeholder="密码">
+                                <label style="font-size:12px;color:#7f8c8d;"><input type="checkbox" onchange="togglePwdVisibility()"> 显示密码</label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;">配置路径</td>
+                            <td style="padding:8px;"><input type="text" id="edit-sw-config" value="${sw.config_path || ''}" 
+                                style="width:100%;padding:6px;box-sizing:border-box;" placeholder="/etc/xxx/xxx.conf"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;">日志路径</td>
+                            <td style="padding:8px;"><input type="text" id="edit-sw-logpath" value="${sw.log_path || ''}" 
+                                style="width:100%;padding:6px;box-sizing:border-box;" placeholder="/var/log/xxx/"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;">说明</td>
+                            <td style="padding:8px;"><input type="text" id="edit-sw-desc" value="${sw.description || ''}" 
+                                style="width:100%;padding:6px;box-sizing:border-box;" placeholder="软件描述"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;">备注</td>
+                            <td style="padding:8px;"><textarea id="edit-sw-notes" rows="3" 
+                                style="width:100%;padding:6px;box-sizing:border-box;resize:vertical;" 
+                                placeholder="自定义备注信息">${sw.notes || ''}</textarea></td>
+                        </tr>
+                    </table>
+                </div>
+            `;
+            
+            showModal('编辑软件信息 - ' + (sw.display_name || sw.name), formHtml, false, true);
+        }
+        
+        function togglePwdVisibility() {
+            const pwdInput = document.getElementById('edit-sw-password');
+            pwdInput.type = pwdInput.type === 'password' ? 'text' : 'password';
+        }
+        
+        function saveSoftwareInfo() {
+            const name = document.querySelector('#modal-title-text').textContent.replace('编辑软件信息 - ', '');
+            // 从缓存中获取原始name
+            let originalName = '';
+            for (const [key, val] of Object.entries(softwareInfoCache)) {
+                if ((val.display_name || val.name) === name) {
+                    originalName = key;
+                    break;
+                }
+            }
+            
+            if (!originalName) return;
+            
+            const data = {
+                display_name: document.getElementById('edit-sw-name').value,
+                ports: document.getElementById('edit-sw-ports').value,
+                username: document.getElementById('edit-sw-username').value,
+                password: document.getElementById('edit-sw-password').value,
+                config_path: document.getElementById('edit-sw-config').value,
+                log_path: document.getElementById('edit-sw-logpath').value,
+                description: document.getElementById('edit-sw-desc').value,
+                notes: document.getElementById('edit-sw-notes').value,
+            };
+            
+            fetch(`/api/software/info/${originalName}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(r => r.json()).then(result => {
+                if (result.success) {
+                    closeModal();
+                    loadSoftwareInfo();
+                } else {
+                    alert('保存失败');
+                }
+            });
+        }
+        
         function runHealthcheck() {
             const output = document.getElementById('healthcheck-output');
             output.textContent = '正在执行健康检查...';
@@ -991,10 +1154,16 @@
             });
         }
         
-        function showModal(title, body, showMinimize) {
+        function showModal(title, body, showMinimize, showSave) {
             document.getElementById('modal-title-text').textContent = title;
             document.getElementById('modal-body').innerHTML = body;
             document.getElementById('modal-minimize-btn').style.display = showMinimize ? 'inline-block' : 'none';
+            const footer = document.getElementById('modal-footer');
+            if (showSave) {
+                footer.innerHTML = '<button class="btn" onclick="closeModal()" style="margin-right:8px;">取消</button><button class="btn btn-primary" onclick="saveSoftwareInfo()">保存</button>';
+            } else {
+                footer.innerHTML = '<button class="btn btn-primary" onclick="closeModal()">确定</button>';
+            }
             document.getElementById('modal').classList.add('show');
         }
         
