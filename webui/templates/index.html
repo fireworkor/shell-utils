@@ -207,6 +207,9 @@
             <div class="menu-item" onclick="showPage('logs')">
                 <i>📝</i> 日志查看
             </div>
+            <div class="menu-item" onclick="showPage('alert')">
+                <i>🔔</i> 邮件预警
+            </div>
         </div>
         
         <div class="content">
@@ -473,6 +476,69 @@
                     <pre class="output-box" id="logs-output" style="margin-top: 16px;">选择日志类型并点击按钮...</pre>
                 </div>
             </div>
+            
+            <!-- 邮件预警设置 -->
+            <div id="page-alert" class="page" style="display:none">
+                <div class="card">
+                    <div class="card-title">📧 SMTP 邮件配置</div>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+                        <label style="display:flex;align-items:center;gap:6px;">
+                            <input type="checkbox" id="alert-enabled" onchange="toggleAlertEnabled()">
+                            <strong>启用邮件预警</strong>
+                        </label>
+                        <button class="btn btn-success" onclick="testAlertEmail()">发送测试邮件</button>
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;width:120px;">SMTP 服务器</td>
+                            <td style="padding:8px;"><input type="text" id="alert-smtp-host" placeholder="smtp.qq.com" style="width:100%;max-width:300px;padding:8px;box-sizing:border-box;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;">SMTP 端口</td>
+                            <td style="padding:8px;"><input type="number" id="alert-smtp-port" value="465" style="width:120px;padding:8px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;">发件邮箱</td>
+                            <td style="padding:8px;"><input type="text" id="alert-smtp-user" placeholder="your@qq.com" style="width:100%;max-width:300px;padding:8px;box-sizing:border-box;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;">邮箱密码/授权码</td>
+                            <td style="padding:8px;"><input type="password" id="alert-smtp-pass" placeholder="SMTP授权码" style="width:100%;max-width:300px;padding:8px;box-sizing:border-box;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;">SSL</td>
+                            <td style="padding:8px;"><input type="checkbox" id="alert-smtp-ssl" checked> 启用SSL加密</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;">发件人名称</td>
+                            <td style="padding:8px;"><input type="text" id="alert-sender-name" value="运维工具" style="width:200px;padding:8px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px;font-weight:bold;">收件邮箱</td>
+                            <td style="padding:8px;"><input type="text" id="alert-receivers" placeholder="多个用逗号分隔: a@qq.com, b@qq.com" style="width:100%;max-width:500px;padding:8px;box-sizing:border-box;"></td>
+                        </tr>
+                    </table>
+                    <div style="margin-top:16px;">
+                        <button class="btn btn-primary" onclick="saveAlertConfig()">保存配置</button>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">⚙️ 预警规则配置</div>
+                    <p style="color:#7f8c8d;font-size:13px;margin-bottom:12px;">配置各模块的邮件预警触发条件</p>
+                    <table class="table">
+                        <thead>
+                            <tr><th>模块</th><th>启用</th><th>成功时发送</th><th>失败时发送</th></tr>
+                        </thead>
+                        <tbody id="alert-rules-body">
+                            <tr><td colspan="4" style="text-align:center;color:#7f8c8d;">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                    <div style="margin-top:16px;">
+                        <button class="btn btn-primary" onclick="saveAlertRules()">保存规则</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -649,6 +715,8 @@
             loadSoftwareInfo();
             loadLogOptions();
             loadHealthcheckOptions();
+            loadAlertConfig();
+            loadAlertRules();
         }
         
         function loadSystemInfo() {
@@ -1367,6 +1435,108 @@
                     select.innerHTML += `<option value="${item.value}">${item.label}</option>`;
                 });
             });
+        }
+        
+        // =========================================
+        // 邮件预警管理
+        // =========================================
+        
+        const moduleNames = {
+            'healthcheck': '健康检查',
+            'security': '安全扫描',
+            'backup': '数据备份',
+            'restore': '数据恢复',
+            'daily': '日常巡检'
+        };
+        
+        function loadAlertConfig() {
+            fetch('/api/alert/config').then(r => r.json()).then(data => {
+                document.getElementById('alert-smtp-host').value = data.smtp_host || '';
+                document.getElementById('alert-smtp-port').value = data.smtp_port || 465;
+                document.getElementById('alert-smtp-user').value = data.smtp_user || '';
+                document.getElementById('alert-smtp-pass').value = data.smtp_pass || '';
+                document.getElementById('alert-smtp-ssl').checked = !!data.smtp_ssl;
+                document.getElementById('alert-sender-name').value = data.sender_name || '运维工具';
+                document.getElementById('alert-receivers').value = data.receivers || '';
+                document.getElementById('alert-enabled').checked = !!data.enabled;
+            });
+        }
+        
+        function loadAlertRules() {
+            fetch('/api/alert/rules').then(r => r.json()).then(data => {
+                const tbody = document.getElementById('alert-rules-body');
+                tbody.innerHTML = '';
+                data.forEach(rule => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${moduleNames[rule.module] || rule.module}</strong></td>
+                            <td><input type="checkbox" data-module="${rule.module}" data-field="enabled" ${rule.enabled ? 'checked' : ''}></td>
+                            <td><input type="checkbox" data-module="${rule.module}" data-field="on_success" ${rule.on_success ? 'checked' : ''}></td>
+                            <td><input type="checkbox" data-module="${rule.module}" data-field="on_fail" ${rule.on_fail ? 'checked' : ''}></td>
+                        </tr>`;
+                });
+            });
+        }
+        
+        function saveAlertConfig() {
+            const data = {
+                smtp_host: document.getElementById('alert-smtp-host').value,
+                smtp_port: parseInt(document.getElementById('alert-smtp-port').value) || 465,
+                smtp_user: document.getElementById('alert-smtp-user').value,
+                smtp_pass: document.getElementById('alert-smtp-pass').value === '●●●●●●' ? '' : document.getElementById('alert-smtp-pass').value,
+                smtp_ssl: document.getElementById('alert-smtp-ssl').checked ? 1 : 0,
+                sender_name: document.getElementById('alert-sender-name').value,
+                receivers: document.getElementById('alert-receivers').value,
+                enabled: document.getElementById('alert-enabled').checked ? 1 : 0
+            };
+            
+            fetch('/api/alert/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(r => r.json()).then(result => {
+                if (result.success) {
+                    showModal('成功', '邮件配置已保存');
+                } else {
+                    showModal('失败', '保存失败');
+                }
+            });
+        }
+        
+        function saveAlertRules() {
+            const checkboxes = document.querySelectorAll('#alert-rules-body input[type="checkbox"]');
+            const rulesMap = {};
+            checkboxes.forEach(cb => {
+                const module = cb.dataset.module;
+                const field = cb.dataset.field;
+                if (!rulesMap[module]) rulesMap[module] = { module };
+                rulesMap[module][field] = cb.checked ? 1 : 0;
+            });
+            
+            fetch('/api/alert/rules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rules: Object.values(rulesMap) })
+            }).then(r => r.json()).then(result => {
+                if (result.success) {
+                    showModal('成功', '预警规则已保存');
+                }
+            });
+        }
+        
+        function testAlertEmail() {
+            showModal('测试', '正在发送测试邮件...');
+            fetch('/api/alert/test', { method: 'POST' }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    showModal('成功', '测试邮件已发送，请检查收件箱');
+                } else {
+                    showModal('失败', '发送失败: ' + (data.error || '未知错误'));
+                }
+            });
+        }
+        
+        function toggleAlertEnabled() {
+            // 仅切换UI状态，保存时才生效
         }
         
         function showModal(title, body, showMinimize, showSave) {

@@ -13,6 +13,10 @@ import re
 import sqlite3
 import hmac
 import hashlib
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.utils import formatdate
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_socketio import SocketIO, emit
 import threading
@@ -78,6 +82,135 @@ def init_db():
     
     conn.commit()
     conn.close()
+
+# =========================================
+# 邮件预警模块
+# =========================================
+
+def init_alert_db():
+    """初始化预警配置表"""
+    conn = get_db()
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS alert_config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            smtp_host TEXT DEFAULT '',
+            smtp_port INTEGER DEFAULT 465,
+            smtp_user TEXT DEFAULT '',
+            smtp_pass TEXT DEFAULT '',
+            smtp_ssl INTEGER DEFAULT 1,
+            sender_name TEXT DEFAULT '运维工具',
+            receivers TEXT DEFAULT '',
+            enabled INTEGER DEFAULT 0
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS alert_rules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            module TEXT NOT NULL UNIQUE,
+            enabled INTEGER DEFAULT 0,
+            on_success INTEGER DEFAULT 0,
+            on_fail INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    # 插入默认预警规则
+    default_rules = [
+        ('healthcheck', 0, 0, 1),
+        ('security', 0, 0, 1),
+        ('backup', 0, 0, 1),
+        ('restore', 0, 0, 1),
+        ('daily', 0, 0, 1),
+    ]
+    for rule in default_rules:
+        conn.execute('INSERT OR IGNORE INTO alert_rules (module, enabled, on_success, on_fail) VALUES (?, ?, ?, ?)', rule)
+    conn.commit()
+    conn.close()
+
+def get_alert_config():
+    """获取邮件配置"""
+    conn = get_db()
+    row = conn.execute('SELECT * FROM alert_config ORDER BY id DESC LIMIT 1').fetchone()
+    conn.close()
+    if row:
+        return dict(row)
+    return {'smtp_host': '', 'smtp_port': 465, 'smtp_user': '', 'smtp_pass': '', 'smtp_ssl': 1, 'sender_name': '运维工具', 'receivers': '', 'enabled': 0}
+
+def get_alert_rules():
+    """获取预警规则"""
+    conn = get_db()
+    rows = conn.execute('SELECT * FROM alert_rules').fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+def send_alert_email(module, title, content, success=True):
+    """发送预警邮件"""
+    config = get_alert_config()
+    if not config.get('enabled') or not config.get('smtp_host'):
+        return False
+    
+    rules = get_alert_rules()
+    rule = next((r for r in rules if r['module'] == module), None)
+    if not rule or not rule.get('enabled'):
+        return False
+    
+    # 检查是否需要发送
+    if success and not rule.get('on_success'):
+        return False
+    if not success and not rule.get('on_fail'):
+        return False
+    
+    receivers = config.get('receivers', '')
+    if not receivers:
+        return False
+    
+    try:
+        msg = MIMEMultipart()
+        status = '✅ 成功' if success else '❌ 异常'
+        msg['Subject'] = f'[运维预警] [{status}] {title}'
+        msg['From'] = f"{config.get('sender_name', '运维工具')} <{config.get('smtp_user', '')}>"
+        msg['To'] = receivers
+        msg['Date'] = formatdate(localtime=True)
+        
+        html = f"""
+        <html><body style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2 style="color: {'#27ae60' if success else '#e74c3c'};">{status} {title}</h2>
+        <table style="border-collapse: collapse; width: 100%; margin-top: 16px;">
+            <tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; width: 100px;">模块</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{module}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa;">状态</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{status}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa;">时间</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{time.strftime('%Y-%m-%d %H:%M:%S')}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa;">服务器</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{os.uname().nodename}</td></tr>
+        </table>
+        <h3 style="margin-top: 20px;">详细输出：</h3>
+        <pre style="background: #f4f4f4; padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; white-space: pre-wrap;">{content[:3000]}</pre>
+        <hr style="margin-top: 20px; border: none; border-top: 1px solid #eee;">
+        <p style="color: #999; font-size: 12px;">此邮件由运维工具管理平台自动发送</p>
+        </body></html>
+        """
+        
+        msg.attach(MIMEText(html, 'html', 'utf-8'))
+        
+        if config.get('smtp_ssl'):
+            server = smtplib.SMTP_SSL(config['smtp_host'], config.get('smtp_port', 465), timeout=10)
+        else:
+            server = smtplib.SMTP(config['smtp_host'], config.get('smtp_port', 25), timeout=10)
+        
+        if config.get('smtp_user') and config.get('smtp_pass'):
+            server.login(config['smtp_user'], config['smtp_pass'])
+        
+        server.sendmail(config['smtp_user'], receivers.split(','), msg.as_string())
+        server.quit()
+        print(f'[Alert] 邮件已发送: {title}')
+        return True
+    except Exception as e:
+        print(f'[Alert] 邮件发送失败: {str(e)}')
+        return False
+
+# 启动时初始化
+init_alert_db()
 
 # 启动时初始化数据库
 init_db()
@@ -154,14 +287,23 @@ def healthcheck():
             cmd.append(target)
         
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        output = result.stdout + result.stderr
+        success = result.returncode == 0
+        
+        # 发送预警邮件
+        send_alert_email('healthcheck', f'健康检查 ({target})', output, success)
+        
         return jsonify({
             'success': True,
             'output': result.stdout,
-            'error': result.stderr
+            'error': result.stderr,
+            'alert_sent': True
         })
     except subprocess.TimeoutExpired:
+        send_alert_email('healthcheck', f'健康检查超时 ({target})', '执行超时', False)
         return jsonify({'success': False, 'error': '超时'})
     except Exception as e:
+        send_alert_email('healthcheck', f'健康检查异常 ({target})', str(e), False)
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/security', methods=['POST'])
@@ -175,14 +317,23 @@ def security():
             cmd.append(target)
         
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        output = result.stdout + result.stderr
+        success = result.returncode == 0
+        
+        # 发送预警邮件
+        send_alert_email('security', f'安全扫描 ({target})', output, success)
+        
         return jsonify({
             'success': True,
             'output': result.stdout,
-            'error': result.stderr
+            'error': result.stderr,
+            'alert_sent': True
         })
     except subprocess.TimeoutExpired:
+        send_alert_email('security', f'安全扫描超时 ({target})', '执行超时', False)
         return jsonify({'success': False, 'error': '超时'})
     except Exception as e:
+        send_alert_email('security', f'安全扫描异常 ({target})', str(e), False)
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/daily', methods=['POST'])
@@ -190,14 +341,20 @@ def daily_check():
     try:
         result = subprocess.run([f'{SCRIPT_DIR}/daily-check.sh'], 
                               capture_output=True, text=True, timeout=120)
+        output = result.stdout + result.stderr
+        success = result.returncode == 0
+        send_alert_email('daily', '日常巡检', output, success)
         return jsonify({
             'success': True,
             'output': result.stdout,
-            'error': result.stderr
+            'error': result.stderr,
+            'alert_sent': True
         })
     except subprocess.TimeoutExpired:
+        send_alert_email('daily', '日常巡检超时', '执行超时', False)
         return jsonify({'success': False, 'error': '超时'})
     except Exception as e:
+        send_alert_email('daily', '日常巡检异常', str(e), False)
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/cpu')
@@ -665,14 +822,20 @@ def backup():
     try:
         result = subprocess.run([f'{SCRIPT_DIR}/backup/backup.sh', 'backup', target], 
                               capture_output=True, text=True, timeout=120)
+        output = result.stdout + result.stderr
+        success = result.returncode == 0
+        send_alert_email('backup', f'数据备份 ({target})', output, success)
         return jsonify({
-            'success': result.returncode == 0,
+            'success': success,
             'output': result.stdout,
-            'error': result.stderr
+            'error': result.stderr,
+            'alert_sent': True
         })
     except subprocess.TimeoutExpired:
+        send_alert_email('backup', f'备份超时 ({target})', '执行超时', False)
         return jsonify({'success': False, 'error': '备份超时'})
     except Exception as e:
+        send_alert_email('backup', f'备份异常 ({target})', str(e), False)
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/restore', methods=['POST'])
@@ -687,14 +850,20 @@ def restore():
     try:
         cmd = [f'{SCRIPT_DIR}/backup/backup.sh', 'restore', target, backup_file]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        output = result.stdout + result.stderr
+        success = result.returncode == 0
+        send_alert_email('restore', f'数据恢复 ({target})', output, success)
         return jsonify({
-            'success': result.returncode == 0,
+            'success': success,
             'output': result.stdout,
-            'error': result.stderr
+            'error': result.stderr,
+            'alert_sent': True
         })
     except subprocess.TimeoutExpired:
+        send_alert_email('restore', f'恢复超时 ({target})', '执行超时', False)
         return jsonify({'success': False, 'error': '恢复超时'})
     except Exception as e:
+        send_alert_email('restore', f'恢复异常 ({target})', str(e), False)
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/backup/list')
@@ -859,6 +1028,65 @@ def list_logs():
         'webui': 'WebUI 日志',
     }
     return jsonify(log_services)
+
+@app.route('/api/alert/config')
+def api_get_alert_config():
+    """获取邮件预警配置"""
+    config = get_alert_config()
+    config['smtp_pass'] = '●●●●●●' if config.get('smtp_pass') else ''
+    return jsonify(config)
+
+@app.route('/api/alert/config', methods=['POST'])
+def api_save_alert_config():
+    """保存邮件预警配置"""
+    data = request.json
+    conn = get_db()
+    conn.execute('DELETE FROM alert_config')
+    conn.execute('''
+        INSERT INTO alert_config (smtp_host, smtp_port, smtp_user, smtp_pass, smtp_ssl, sender_name, receivers, enabled)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        data.get('smtp_host', ''),
+        data.get('smtp_port', 465),
+        data.get('smtp_user', ''),
+        data.get('smtp_pass', ''),
+        data.get('smtp_ssl', 1),
+        data.get('sender_name', '运维工具'),
+        data.get('receivers', ''),
+        data.get('enabled', 0)
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/api/alert/rules')
+def api_get_alert_rules():
+    """获取预警规则"""
+    return jsonify(get_alert_rules())
+
+@app.route('/api/alert/rules', methods=['POST'])
+def api_save_alert_rules():
+    """保存预警规则"""
+    data = request.json
+    rules = data.get('rules', [])
+    conn = get_db()
+    for rule in rules:
+        conn.execute('''
+            UPDATE alert_rules SET enabled = ?, on_success = ?, on_fail = ? WHERE module = ?
+        ''', (rule.get('enabled', 0), rule.get('on_success', 0), rule.get('on_fail', 1), rule.get('module')))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/api/alert/test', methods=['POST'])
+def api_test_alert():
+    """发送测试邮件"""
+    config = get_alert_config()
+    if not config.get('smtp_host') or not config.get('smtp_user'):
+        return jsonify({'success': False, 'error': '请先配置SMTP信息'})
+    
+    success = send_alert_email('test', '测试邮件', '这是一封测试邮件，如果您收到此邮件，说明邮件预警配置正确。', True)
+    return jsonify({'success': success, 'error': '' if success else '发送失败，请检查配置'})
 
 @app.route('/api/healthcheck/options')
 def healthcheck_options():
