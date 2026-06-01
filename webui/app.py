@@ -145,9 +145,15 @@ def get_service_status(service):
 
 @app.route('/api/healthcheck', methods=['POST'])
 def healthcheck():
+    data = request.json or {}
+    target = data.get('target', 'all')
+    
     try:
-        result = subprocess.run([f'{SCRIPT_DIR}/healthcheck/healthcheck.sh'], 
-                              capture_output=True, text=True, timeout=60)
+        cmd = [f'{SCRIPT_DIR}/healthcheck/healthcheck.sh']
+        if target and target != 'all':
+            cmd.append(target)
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         return jsonify({
             'success': True,
             'output': result.stdout,
@@ -160,9 +166,15 @@ def healthcheck():
 
 @app.route('/api/security', methods=['POST'])
 def security():
+    data = request.json or {}
+    target = data.get('target', 'all')
+    
     try:
-        result = subprocess.run([f'{SCRIPT_DIR}/security-baseline/security-baseline.sh', 'all'], 
-                              capture_output=True, text=True, timeout=120)
+        cmd = [f'{SCRIPT_DIR}/security-baseline/security-baseline.sh']
+        if target and target != 'all':
+            cmd.append(target)
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
         return jsonify({
             'success': True,
             'output': result.stdout,

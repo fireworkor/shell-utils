@@ -233,17 +233,24 @@
                 
                 <div class="card">
                     <div class="card-title">📊 服务状态概览</div>
+                    <div style="margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <span style="font-size:13px;color:#7f8c8d;">每页</span>
+                        <select id="dashboard-page-size" onchange="renderDashboardServicesPage(1)" style="padding:6px;">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="30">30</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span style="font-size:13px;color:#7f8c8d;">条</span>
+                    </div>
                     <table class="table">
                         <thead>
                             <tr><th>服务名称</th><th>状态</th><th>操作</th></tr>
                         </thead>
                         <tbody id="services-table-body"></tbody>
                     </table>
-                </div>
-                
-                <div class="card">
-                    <div class="card-title">📦 已安装软件</div>
-                    <div class="software-grid" id="software-grid"></div>
+                    <div id="dashboard-services-pagination" class="pagination"></div>
                 </div>
             </div>
             
@@ -354,8 +361,19 @@
             <div id="page-healthcheck" class="page" style="display:none">
                 <div class="card">
                     <div class="card-title">✅ 健康检查</div>
-                    <button class="btn btn-primary" onclick="runHealthcheck()">开始检查</button>
-                    <pre class="output-box" id="healthcheck-output" style="margin-top: 16px;">点击按钮开始健康检查...</pre>
+                    <div style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                        <select id="healthcheck-target" style="padding: 10px; width: 200px;">
+                            <option value="all">全部检查</option>
+                            <option value="nginx">Nginx</option>
+                            <option value="mysql">MySQL</option>
+                            <option value="redis">Redis</option>
+                            <option value="php">PHP-FPM</option>
+                            <option value="docker">Docker</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="runHealthcheck()">开始检查</button>
+                        <button class="btn btn-success" onclick="runHealthcheck('all')">一键全部检查</button>
+                    </div>
+                    <pre class="output-box" id="healthcheck-output" style="margin-top: 16px;">选择检查目标并点击按钮...</pre>
                 </div>
             </div>
             
@@ -363,8 +381,20 @@
             <div id="page-security" class="page" style="display:none">
                 <div class="card">
                     <div class="card-title">🔒 安全基线扫描</div>
-                    <button class="btn btn-danger" onclick="runSecurityScan()">开始扫描</button>
-                    <pre class="output-box" id="security-output" style="margin-top: 16px;">点击按钮开始安全扫描...</pre>
+                    <div style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                        <select id="security-target" style="padding: 10px; width: 200px;">
+                            <option value="all">全部扫描</option>
+                            <option value="os">操作系统</option>
+                            <option value="database">数据库</option>
+                            <option value="web">Web服务器</option>
+                            <option value="docker">Docker</option>
+                            <option value="network">网络安全</option>
+                        </select>
+                        <button class="btn btn-danger" onclick="runSecurityScan()">开始扫描</button>
+                        <button class="btn btn-warning" onclick="runSecurityScan('all')">一键全部扫描</button>
+                        <button class="btn btn-primary" onclick="exportSecurityReport()">导出报告</button>
+                    </div>
+                    <pre class="output-box" id="security-output" style="margin-top: 16px;">选择扫描类型并点击按钮...</pre>
                 </div>
             </div>
             
@@ -654,23 +684,46 @@
                 allServicesData = data;
                 renderServices(data);
                 
-                // 更新仪表盘服务表
-                const tableBody = document.getElementById('services-table-body');
-                tableBody.innerHTML = '';
-                let activeCount = 0;
-                data.forEach(service => {
-                    const statusClass = service.status === 'active' ? 'status-active' : service.status === 'inactive' ? 'status-inactive' : 'status-unknown';
-                    if (service.status === 'active') activeCount++;
-                    tableBody.innerHTML += `
-                        <tr>
-                            <td>${service.name}</td>
-                            <td><span class="status-badge ${statusClass}">${service.status}</span></td>
-                            <td>-</td>
-                        </tr>`;
+                // 更新仪表盘服务表（active排前面，分页）
+                const sorted = [...data].sort((a, b) => {
+                    if (a.status === 'active' && b.status !== 'active') return -1;
+                    if (a.status !== 'active' && b.status === 'active') return 1;
+                    return a.name.localeCompare(b.name);
                 });
+                let activeCount = sorted.filter(s => s.status === 'active').length;
                 const el = document.getElementById('active-services');
                 if (el) el.textContent = activeCount + '/' + data.length;
+                
+                // 存储排序后的数据供分页使用
+                window._dashboardServicesData = sorted;
+                renderDashboardServicesPage(1);
             });
+        }
+        
+        function renderDashboardServicesPage(page) {
+            const data = window._dashboardServicesData || [];
+            const pageSize = parseInt(document.getElementById('dashboard-page-size').value) || 10;
+            const start = (page - 1) * pageSize;
+            const pageData = data.slice(start, start + pageSize);
+            const tableBody = document.getElementById('services-table-body');
+            
+            tableBody.innerHTML = '';
+            pageData.forEach(service => {
+                const statusClass = service.status === 'active' ? 'status-active' : service.status === 'inactive' ? 'status-inactive' : 'status-unknown';
+                const statusText = service.status === 'active' ? '运行中' : service.status === 'inactive' ? '已停止' : service.status;
+                tableBody.innerHTML += `
+                    <tr>
+                        <td>${service.name}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td>
+                            <button class="btn btn-success" style="padding:4px 10px;font-size:12px;" onclick="controlService('start', '${service.name}')">启动</button>
+                            <button class="btn btn-warning" style="padding:4px 10px;font-size:12px;" onclick="controlService('stop', '${service.name}')">停止</button>
+                            <button class="btn btn-primary" style="padding:4px 10px;font-size:12px;" onclick="controlService('restart', '${service.name}')">重启</button>
+                        </td>
+                    </tr>`;
+            });
+            
+            renderPagination('dashboard-services-pagination', data.length, page, pageSize, 'renderDashboardServicesPage');
         }
         
         function renderServices(data) {
@@ -1111,22 +1164,49 @@
             });
         }
         
-        function runHealthcheck() {
+        function runHealthcheck(target) {
             const output = document.getElementById('healthcheck-output');
-            output.textContent = '正在执行健康检查...';
+            const t = target || document.getElementById('healthcheck-target').value;
+            output.textContent = `正在执行健康检查 (${t === 'all' ? '全部' : t})...`;
             
-            fetch('/api/healthcheck', { method: 'POST' }).then(r => r.json()).then(data => {
+            fetch('/api/healthcheck', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: t })
+            }).then(r => r.json()).then(data => {
                 output.textContent = data.output + (data.error ? '\n错误: ' + data.error : '');
             });
         }
         
-        function runSecurityScan() {
+        function runSecurityScan(target) {
             const output = document.getElementById('security-output');
-            output.textContent = '正在执行安全扫描...';
+            const t = target || document.getElementById('security-target').value;
+            output.textContent = `正在执行安全扫描 (${t === 'all' ? '全部' : t})...`;
             
-            fetch('/api/security', { method: 'POST' }).then(r => r.json()).then(data => {
+            fetch('/api/security', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: t })
+            }).then(r => r.json()).then(data => {
                 output.textContent = data.output + (data.error ? '\n错误: ' + data.error : '');
             });
+        }
+        
+        function exportSecurityReport() {
+            const output = document.getElementById('security-output');
+            const text = output.textContent;
+            if (!text || text.includes('选择扫描类型')) {
+                alert('请先执行安全扫描');
+                return;
+            }
+            
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `安全扫描报告_${new Date().toISOString().slice(0,10)}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
         }
         
         function runDailyCheck() {
