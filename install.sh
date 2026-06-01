@@ -49,6 +49,33 @@ if [ $# -eq 0 ]; then
     echo -e "${YELLOW}性能优化命令：${NC}"
     echo "  tune_kernel          - 自动调优内核参数（根据内存大小）"
     echo ""
+    echo -e "${YELLOW}监控管理命令：${NC}"
+    echo "  monitor_install      - 安装监控系统 (Prometheus)"
+    echo "  monitor_start        - 启动监控服务"
+    echo "  monitor_stop         - 停止监控服务"
+    echo "  monitor_status       - 查看监控状态"
+    echo "  sysmon               - 实时系统监控（终端界面）"
+    echo ""
+    echo -e "${YELLOW}SSL 证书命令：${NC}"
+    echo "  ssl_cert <域名>      - 为域名申请 Let's Encrypt 证书"
+    echo "  ssl_renew            - 续期所有证书"
+    echo "  ssl_list             - 列出所有证书"
+    echo "  ssl_delete <域名>    - 删除指定证书"
+    echo ""
+    echo -e "${YELLOW}备份管理命令：${NC}"
+    echo "  backup_files         - 备份重要配置文件"
+    echo "  backup_db            - 备份所有数据库"
+    echo "  backup_all           - 完整备份（文件+数据库）"
+    echo "  backup_auto          - 配置自动备份（每天凌晨执行）"
+    echo "  restore_db <文件>    - 恢复数据库"
+    echo ""
+    echo -e "${YELLOW}系统清理命令：${NC}"
+    echo "  cleanup_check        - 检查可清理空间"
+    echo "  cleanup_kernel       - 清理旧内核"
+    echo "  cleanup_log          - 清理日志文件"
+    echo "  cleanup_cache        - 清理缓存"
+    echo "  cleanup_all          - 完整系统清理"
+    echo ""
     echo -e "${YELLOW}一键部署方案：${NC}"
     echo "  lnmp                 - 一键安装 LNMP 栈"
     echo "  lamp                 - 一键安装 LAMP 栈"
@@ -56,13 +83,15 @@ if [ $# -eq 0 ]; then
     echo "  common_tools         - 安装常用工具"
     echo "  firewall             - 配置防火墙"
     echo "  all                  - 安装所有基础服务"
+    echo "  ops_all              - 安装所有运维工具（监控+备份+SSL）"
     echo ""
     echo -e "${YELLOW}示例：${NC}"
     echo "  curl ... | bash -s -- system_info"
     echo "  curl ... | bash -s -- nginx"
-    echo "  curl ... | bash -s -- php 8.0"
-    echo "  curl ... | sudo bash -s -- tune_kernel"
-    echo "  curl ... | sudo bash -s -- lnmp"
+    echo "  curl ... | sudo bash -s -- monitor_install"
+    echo "  curl ... | sudo bash -s -- ssl_cert example.com"
+    echo "  curl ... | sudo bash -s -- backup_all"
+    echo "  curl ... | sudo bash -s -- cleanup_all"
     echo ""
     exit 0
 fi
@@ -116,7 +145,7 @@ configure_firewall() {
     dnf install -y firewalld
     systemctl start firewalld && systemctl enable firewalld
     
-    for port in 22/tcp 80/tcp 443/tcp 3306/tcp 5432/tcp 6379/tcp 8080/tcp 9090/tcp; do
+    for port in 22/tcp 80/tcp 443/tcp 3306/tcp 5432/tcp 6379/tcp 8080/tcp 9090/tcp 9100/tcp; do
         firewall-cmd --permanent --add-port=$port > /dev/null 2>&1 || true
     done
     firewall-cmd --reload > /dev/null 2>&1 || true
@@ -163,7 +192,6 @@ install_mysql() {
 install_mariadb() {
     echo -e "${BLUE}正在安装 MariaDB 10.5...${NC}"
     
-    # 创建 MariaDB 仓库
     cat > /etc/yum.repos.d/mariadb.repo << 'EOF'
 [mariadb]
 name = MariaDB
@@ -172,14 +200,11 @@ gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
 gpgcheck=1
 EOF
     
-    # 安装 MariaDB
     dnf install -y MariaDB-server MariaDB-client MariaDB-common
     
-    # 启动并设置开机启动
     systemctl start mariadb
     systemctl enable mariadb
     
-    # 安全初始化
     echo -e "${YELLOW}正在运行 MariaDB 安全初始化...${NC}"
     mysql_secure_installation << 'MARIADB_EOF'
 
@@ -306,7 +331,6 @@ tune_kernel() {
     echo ""
     echo -e "${YELLOW}检测到内存: ${mem_gb}GB${NC}"
     
-    # 确定配置方案
     local profile=""
     if [ $mem_gb -lt 1 ]; then
         profile="tiny"
@@ -329,7 +353,6 @@ tune_kernel() {
     echo -e "${YELLOW}配置方案: ${profile}${NC}"
     echo ""
     
-    # 根据内存大小应用不同配置
     echo -e "${BLUE}正在应用内核参数...${NC}"
     
     local tcp_mem_max=""
@@ -338,7 +361,6 @@ tune_kernel() {
     local file_max=""
     local nofile_limit=""
     
-    # 计算参数
     if [ $mem_gb -lt 2 ]; then
         tcp_mem_max="786432 1048576 1572864"
         tcp_rmem_max="4096 87380 4194304"
@@ -377,7 +399,6 @@ tune_kernel() {
         nofile_limit="524288"
     fi
     
-    # 创建配置文件
     cat > /etc/sysctl.d/99-tuning.conf << EOF
 # CentOS 8 内核调优配置 - $profile 方案
 # 内存: ${mem_gb}GB
@@ -417,10 +438,8 @@ kernel.sem = 250 64000 100 512
 kernel.pid_max = 65536
 EOF
     
-    # 应用配置
     sysctl -p /etc/sysctl.d/99-tuning.conf > /dev/null 2>&1 || true
     
-    # 配置 limits
     cat > /etc/security/limits.d/99-tuning.conf << EOF
 * soft nofile $nofile_limit
 * hard nofile $nofile_limit
@@ -437,6 +456,370 @@ EOF
     echo -e "${YELLOW}建议重启系统使配置完全生效: reboot${NC}"
 }
 
+# 安装监控
+install_monitor() {
+    check_root
+    echo -e "${BLUE}正在安装监控系统...${NC}"
+    
+    useradd --no-create-home --shell /bin/false prometheus 2>/dev/null || true
+    
+    cd /tmp
+    wget -q https://github.com/prometheus/prometheus/releases/download/v2.45.0/prometheus-2.45.0.linux-amd64.tar.gz
+    tar xzf prometheus-2.45.0.linux-amd64.tar.gz
+    mv prometheus-2.45.0.linux-amd64 /opt/prometheus
+    ln -sf /opt/prometheus /usr/local/bin/prometheus
+    
+    mkdir -p /etc/prometheus /var/lib/prometheus
+    cp /opt/prometheus/prometheus.yml /etc/prometheus/
+    chown -R prometheus:prometheus /etc/prometheus /var/lib/prometheus /opt/prometheus
+    
+    cat > /etc/systemd/system/prometheus.service << 'EOF'
+[Unit]
+Description=Prometheus Monitoring
+After=network.target
+
+[Service]
+User=prometheus
+ExecStart=/usr/local/bin/prometheus/prometheus \
+    --config.file=/etc/prometheus/prometheus.yml \
+    --storage.tsdb.path=/var/lib/prometheus/ \
+    --web.console.libraries=/opt/prometheus/consoles \
+    --web.console.templates=/opt/prometheus/consoles
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    echo -e "${YELLOW}安装 Node Exporter...${NC}"
+    cd /tmp
+    wget -q https://github.com/prometheus/node_exporter/releases/download/v1.6.1/node_exporter-1.6.1.linux-amd64.tar.gz
+    tar xzf node_exporter-1.6.1.linux-amd64.tar.gz
+    mv node_exporter-1.6.1.linux-amd64 /opt/node_exporter
+    ln -sf /opt/node_exporter/node_exporter /usr/local/bin/node_exporter
+    
+    cat > /etc/systemd/system/node_exporter.service << 'EOF'
+[Unit]
+Description=Node Exporter
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/node_exporter/node_exporter
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    systemctl daemon-reload
+    systemctl start node_exporter
+    systemctl enable node_exporter
+    systemctl start prometheus
+    systemctl enable prometheus
+    
+    cd ~
+    rm -rf /tmp/prometheus* /tmp/node_exporter*
+    
+    echo -e "${GREEN}✓ 监控系统安装完成${NC}"
+    echo ""
+    echo "访问地址："
+    echo "  Prometheus: http://your_server_ip:9090"
+    echo "  Node Exporter: http://your_server_ip:9100"
+}
+
+# 实时系统监控
+sysmon() {
+    while true; do
+        clear
+        echo -e "${CYAN}========================================${NC}"
+        echo -e "${CYAN}   系统实时监控$(date '+%Y-%m-%d %H:%M:%S')${NC}"
+        echo -e "${CYAN}========================================${NC}"
+        echo ""
+        
+        echo -e "${YELLOW}【系统信息】${NC}"
+        echo "  主机名: $(hostname)"
+        echo "  运行时间: $(uptime -p)"
+        echo "  负载: $(uptime | awk -F'load average:' '{print $2}')"
+        echo ""
+        
+        echo -e "${YELLOW}【CPU 使用】${NC}"
+        top -bn1 | head -5 | tail -4 | awk '{printf "  %s %s %s%%\n", $2, $4, $9}'
+        echo ""
+        
+        echo -e "${YELLOW}【内存使用】${NC}"
+        free -h | awk 'NR==2 {printf "  总计: %s | 已用: %s | 空闲: %s | 使用率: %.1f%%\n", $2, $3, $4, ($3/$2)*100}'
+        echo ""
+        
+        echo -e "${YELLOW}【磁盘使用】${NC}"
+        df -h | grep -E '^/dev/' | awk '{printf "  %s: %s / %s (%.0f%%)\n", $1, $3, $2, $5+0}'
+        echo ""
+        
+        echo -e "${YELLOW}【网络连接】${NC}"
+        echo "  SSH 连接数: $(who | wc -l)"
+        echo "  网络连接数: $(netstat -an 2>/dev/null | grep ESTABLISHED | wc -l)"
+        echo ""
+        
+        echo -e "${YELLOW}【Top 5 进程（CPU）】${NC}"
+        ps aux --sort=-%cpu | head -6 | tail -5 | awk '{printf "  %-10s %6s%% %6s%% %s\n", $11, $3, $4, $1}'
+        echo ""
+        
+        sleep 3
+    done
+}
+
+monitor_start() {
+    check_root
+    systemctl start prometheus node_exporter
+    systemctl enable prometheus node_exporter
+    echo -e "${GREEN}✓ 监控服务已启动${NC}"
+}
+
+monitor_stop() {
+    check_root
+    systemctl stop prometheus node_exporter
+    echo -e "${GREEN}✓ 监控服务已停止${NC}"
+}
+
+monitor_status() {
+    echo -e "${BLUE}监控服务状态：${NC}"
+    systemctl status prometheus --no-pager | grep -E "Active:|● |Main PID"
+    echo ""
+    systemctl status node_exporter --no-pager | grep -E "Active:|● |Main PID"
+    echo ""
+    echo "访问地址："
+    echo "  Prometheus: http://your_server_ip:9090"
+    echo "  Node Exporter: http://your_server_ip:9100"
+}
+
+# SSL 证书
+install_certbot() {
+    check_root
+    echo -e "${BLUE}正在安装 Certbot...${NC}"
+    dnf install -y epel-release
+    dnf install -y certbot python3-certbot-nginx python3-certbot-apache
+    echo -e "${GREEN}✓ Certbot 安装完成${NC}"
+}
+
+ssl_cert() {
+    local domain=$1
+    check_root
+    
+    if [ -z "$domain" ]; then
+        echo -e "${RED}错误：请提供域名${NC}"
+        echo "使用方法: $0 ssl_cert example.com"
+        exit 1
+    fi
+    
+    echo -e "${BLUE}正在为 ${domain} 申请 SSL 证书...${NC}"
+    install_certbot
+    
+    if command -v nginx &>/dev/null; then
+        certbot --nginx -d $domain --non-interactive --agree-tos -m admin@$domain
+    elif command -v httpd &>/dev/null; then
+        certbot --apache -d $domain --non-interactive --agree-tos -m admin@$domain
+    else
+        certbot certonly --standalone -d $domain --non-interactive --agree-tos -m admin@$domain
+    fi
+    
+    echo -e "${GREEN}✓ SSL 证书申请完成${NC}"
+}
+
+ssl_renew() {
+    check_root
+    echo -e "${BLUE}续期所有 SSL 证书...${NC}"
+    certbot renew --quiet
+    systemctl restart nginx httpd 2>/dev/null || true
+    echo -e "${GREEN}✓ 证书续期完成${NC}"
+}
+
+ssl_list() {
+    echo -e "${BLUE}已申请的 SSL 证书：${NC}"
+    if [ -d /etc/letsencrypt/live ]; then
+        ls -1 /etc/letsencrypt/live/
+    else
+        echo "暂无证书"
+    fi
+}
+
+ssl_delete() {
+    local domain=$1
+    check_root
+    
+    if [ -z "$domain" ]; then
+        echo -e "${RED}错误：请提供域名${NC}"
+        exit 1
+    fi
+    
+    echo -e "${BLUE}删除证书：${domain}${NC}"
+    certbot delete --cert-name $domain
+    echo -e "${GREEN}✓ 证书已删除${NC}"
+}
+
+# 备份管理
+backup_files() {
+    check_root
+    echo -e "${BLUE}备份重要文件...${NC}"
+    
+    local BACKUP_DIR="/var/backups"
+    local FILES_BACKUP_DIR="$BACKUP_DIR/files"
+    mkdir -p $FILES_BACKUP_DIR
+    
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local backup_file="$FILES_BACKUP_DIR/configs_${timestamp}.tar.gz"
+    
+    tar czf $backup_file \
+        /etc/nginx \
+        /etc/httpd \
+        /etc/mysql \
+        /etc/mariadb \
+        /etc/php* \
+        /etc/redis \
+        /var/www/html 2>/dev/null || true
+    
+    echo -e "${GREEN}✓ 配置文件已备份到：$backup_file${NC}"
+    find $FILES_BACKUP_DIR -name "*.tar.gz" -mtime +7 -delete
+}
+
+backup_db() {
+    check_root
+    echo -e "${BLUE}备份所有数据库...${NC}"
+    
+    local BACKUP_DIR="/var/backups"
+    local DB_BACKUP_DIR="$BACKUP_DIR/databases"
+    mkdir -p $DB_BACKUP_DIR
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    
+    if command -v mysql &>/dev/null; then
+        echo "备份 MySQL/MariaDB..."
+        mkdir -p $DB_BACKUP_DIR/mysql
+        mysqldump --all-databases --single-transaction --quick --lock-tables=false \
+            > $DB_BACKUP_DIR/mysql/all_databases_${timestamp}.sql 2>/dev/null || \
+        mysqldump --all-databases --single-transaction --quick --lock-tables=false \
+            > $DB_BACKUP_DIR/mysql/all_databases_${timestamp}.sql
+        
+        gzip $DB_BACKUP_DIR/mysql/all_databases_${timestamp}.sql
+        echo -e "${GREEN}✓ MySQL/MariaDB 已备份${NC}"
+    fi
+    
+    if command -v pg_dumpall &>/dev/null; then
+        echo "备份 PostgreSQL..."
+        mkdir -p $DB_BACKUP_DIR/postgresql
+        sudo -u postgres pg_dumpall > $DB_BACKUP_DIR/postgresql/all_postgres_${timestamp}.sql
+        gzip $DB_BACKUP_DIR/postgresql/all_postgres_${timestamp}.sql
+        echo -e "${GREEN}✓ PostgreSQL 已备份${NC}"
+    fi
+    
+    find $DB_BACKUP_DIR -name "*.sql.gz" -mtime +7 -delete
+}
+
+backup_all() {
+    check_root
+    echo -e "${PURPLE}开始完整备份...${NC}"
+    backup_files
+    backup_db
+    echo -e "${GREEN}✓ 完整备份完成！${NC}"
+}
+
+backup_auto() {
+    check_root
+    echo -e "${BLUE}配置自动备份...${NC}"
+    
+    cat > /usr/local/bin/auto-backup.sh << 'EOF'
+#!/bin/bash
+BACKUP_DIR="/var/backups"
+DB_BACKUP_DIR="$BACKUP_DIR/databases"
+mkdir -p $DB_BACKUP_DIR/mysql
+timestamp=$(date +%Y%m%d_%H%M%S)
+if command -v mysqldump &>/dev/null; then
+    mysqldump --all-databases --single-transaction --quick --lock-tables=false > $DB_BACKUP_DIR/mysql/all_databases_${timestamp}.sql 2>/dev/null
+    gzip $DB_BACKUP_DIR/mysql/all_databases_${timestamp}.sql
+fi
+find $DB_BACKUP_DIR -name "*.sql.gz" -mtime +30 -delete
+EOF
+    
+    chmod +x /usr/local/bin/auto-backup.sh
+    echo "0 2 * * * /usr/local/bin/auto-backup.sh >> /var/log/backup.log 2>&1" >> /var/spool/cron/root
+    systemctl restart crond
+    
+    echo -e "${GREEN}✓ 自动备份已配置（每天凌晨 2:00）${NC}"
+}
+
+# 系统清理
+cleanup_check() {
+    echo -e "${BLUE}检查可清理空间：${NC}"
+    echo ""
+    
+    echo -e "${YELLOW}【旧内核】${NC}"
+    current_kernel=$(uname -r)
+    old_kernels=$(rpm -qa | grep kernel | grep -v $current_kernel | wc -l)
+    echo "  当前内核: $current_kernel"
+    echo "  旧内核数量: $old_kernels 个"
+    
+    echo ""
+    echo -e "${YELLOW}【日志文件】${NC}"
+    log_size=$(du -sh /var/log 2>/dev/null | awk '{print $1}')
+    echo "  日志目录大小: $log_size"
+    
+    echo ""
+    echo -e "${YELLOW}【缓存文件】${NC}"
+    dnf_cache=$(du -sh /var/cache/dnf 2>/dev/null | awk '{print $1}')
+    echo "  DNF 缓存: $dnf_cache"
+}
+
+cleanup_kernel() {
+    check_root
+    echo -e "${BLUE}清理旧内核...${NC}"
+    
+    current_kernel=$(uname -r)
+    old_kernels=$(rpm -qa | grep kernel | grep -v $current_kernel)
+    
+    if [ -z "$old_kernels" ]; then
+        echo "没有旧内核需要清理"
+        return
+    fi
+    
+    read -p "确认删除旧内核? (yes/no): " confirm
+    if [ "$confirm" != "yes" ]; then
+        echo "已取消"
+        return
+    fi
+    
+    rpm -e $old_kernels
+    echo -e "${GREEN}✓ 旧内核清理完成${NC}"
+}
+
+cleanup_log() {
+    check_root
+    echo -e "${BLUE}清理日志文件...${NC}"
+    
+    find /var/log -name "*.gz" -mtime +7 -delete 2>/dev/null || true
+    journalctl --vacuum-size=500M 2>/dev/null || true
+    
+    echo -e "${GREEN}✓ 日志清理完成${NC}"
+}
+
+cleanup_cache() {
+    check_root
+    echo -e "${BLUE}清理缓存...${NC}"
+    
+    dnf clean all
+    pip3 cache purge 2>/dev/null || true
+    npm cache clean --force 2>/dev/null || true
+    rm -rf /tmp/* 2>/dev/null || true
+    rm -rf /var/tmp/* 2>/dev/null || true
+    
+    echo -e "${GREEN}✓ 缓存清理完成${NC}"
+}
+
+cleanup_all() {
+    check_root
+    echo -e "${PURPLE}开始完整系统清理...${NC}"
+    cleanup_kernel
+    cleanup_log
+    cleanup_cache
+    echo -e "${GREEN}✓ 系统清理完成！${NC}"
+}
+
 # 安装 LNMP
 install_lnmp() {
     echo -e "${PURPLE}开始安装 LNMP 栈...${NC}"
@@ -445,9 +828,7 @@ install_lnmp() {
     install_php 7.4
     configure_firewall
     echo ""
-    echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}✓ LNMP 栈安装完成！${NC}"
-    echo -e "${GREEN}========================================${NC}"
 }
 
 # 安装 LAMP
@@ -457,15 +838,12 @@ install_lamp() {
     install_mariadb
     install_php 7.4
     echo ""
-    echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}✓ LAMP 栈安装完成！${NC}"
-    echo -e "${GREEN}========================================${NC}"
 }
 
 # 安装所有基础服务
 install_all() {
     echo -e "${PURPLE}开始安装所有基础服务...${NC}"
-    echo ""
     install_dev_tools
     install_common_tools
     install_nginx
@@ -475,9 +853,19 @@ install_all() {
     configure_firewall
     tune_kernel
     echo ""
-    echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}✓ 所有基础服务安装完成！${NC}"
-    echo -e "${GREEN}========================================${NC}"
+}
+
+# 安装所有运维工具
+install_ops_all() {
+    echo -e "${PURPLE}开始安装所有运维工具...${NC}"
+    install_monitor
+    backup_auto
+    install_certbot
+    tune_kernel
+    configure_firewall
+    echo ""
+    echo -e "${GREEN}✓ 所有运维工具安装完成！${NC}"
 }
 
 # 系统信息
@@ -495,7 +883,6 @@ show_system_info() {
     df -h | grep -E '^/dev/' | awk '{printf "    %s: %s / %s (使用率: %s)\n", $1, $3, $2, $5}'
 }
 
-# 检查磁盘
 check_disk() {
     local threshold=${1:-90}
     echo -e "${BLUE}磁盘使用情况 (阈值: ${threshold}%)：${NC}"
@@ -509,7 +896,6 @@ check_disk() {
     done
 }
 
-# 检查网络
 check_network() {
     echo -e "${BLUE}网络连接检查...${NC}"
     if ping -c 1 -W 2 8.8.8.8 > /dev/null 2>&1; then
@@ -519,12 +905,10 @@ check_network() {
     fi
 }
 
-# 备份文件
 backup_file() {
     local file=$1
     if [ -z "$file" ]; then
         echo -e "${RED}错误：请指定要备份的文件${NC}"
-        echo "使用方法: $0 backup <文件路径>"
         exit 1
     fi
     
@@ -615,6 +999,60 @@ main() {
         tune_kernel)
             tune_kernel
             ;;
+        monitor_install)
+            install_monitor
+            ;;
+        sysmon)
+            sysmon
+            ;;
+        monitor_start)
+            monitor_start
+            ;;
+        monitor_stop)
+            monitor_stop
+            ;;
+        monitor_status)
+            monitor_status
+            ;;
+        ssl_cert)
+            ssl_cert "$@"
+            ;;
+        ssl_renew)
+            ssl_renew
+            ;;
+        ssl_list)
+            ssl_list
+            ;;
+        ssl_delete)
+            ssl_delete "$@"
+            ;;
+        backup_files)
+            backup_files
+            ;;
+        backup_db)
+            backup_db
+            ;;
+        backup_all)
+            backup_all
+            ;;
+        backup_auto)
+            backup_auto
+            ;;
+        cleanup_check)
+            cleanup_check
+            ;;
+        cleanup_kernel)
+            cleanup_kernel
+            ;;
+        cleanup_log)
+            cleanup_log
+            ;;
+        cleanup_cache)
+            cleanup_cache
+            ;;
+        cleanup_all)
+            cleanup_all
+            ;;
         lnmp)
             check_root "$@"
             install_lnmp
@@ -626,6 +1064,10 @@ main() {
         all)
             check_root "$@"
             install_all
+            ;;
+        ops_all)
+            check_root "$@"
+            install_ops_all
             ;;
         *)
             echo -e "${RED}错误：未知命令 '$command'${NC}"
