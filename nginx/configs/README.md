@@ -16,8 +16,9 @@
 6. wordpress.conf             - WordPress配置
 7. nodejs-proxy.conf          - Node.js反向代理
 8. cache.conf                 - 静态资源缓存配置
-9. rate-limit.conf             - 限流配置
+9. rate-limit.conf            - 限流配置
 10. security.conf             - 安全加固配置
+11. mirror.conf               - 流量复制配置（生产环境流量复制到测试环境）
 
 ─────────────────────────────────────────
 
