@@ -28,7 +28,7 @@ sudo ./php/php.sh 8.0
 sudo ./python/python.sh 3.11
 ```
 
-## ✨ 新功能 (v2.0)
+## ✨ 新功能 (v2.1)
 
 - 🔧 **配置文件管理** - 统一的版本配置
 - 📊 **安装状态检查** - 一键查看已安装软件
@@ -38,16 +38,28 @@ sudo ./python/python.sh 3.11
 - 💾 **自动备份** - 配置和重要文件备份
 - ✅ **安全检查** - 安装前环境验证
 - 🎯 **版本检测** - 自动识别已安装版本
+- 🔐 **安全基线检查** - 操作系统、数据库、Web、Docker、网络安全扫描
+- 📋 **日常巡检** - 系统健康检查、性能监控、日志检查
+- 📦 **多版本管理** - 查看、安装、切换不同版本软件
+- ⚡ **快捷运维** - 常用运维命令的快捷方式
+- 🔄 **脚本升级** - 从 GitHub 自动更新脚本
 
 ## 📁 目录结构
 
 ```
 shell-utils/
-├── main.sh                 # ⭐ 总控脚本 v2.0
+├── main.sh                 # ⭐ 总控脚本 v2.1
+├── update.sh               # 脚本升级工具
+├── daily-check.sh          # 日常巡检脚本
+├── ops.sh                  # 快捷运维命令集
+├── version.sh              # 多版本管理工具
+├── .version               # 版本文件
 ├── lib/
 │   ├── common.sh          # 通用函数库（增强版）
 │   ├── logging.sh         # 日志系统
-│   └── config.sh          # 配置管理
+│   ├── config.sh          # 配置管理
+│   ├── error-handler.sh   # 错误处理
+│   └── logging-v2.sh      # 日志系统 v2
 ├── config/
 │   └── versions.conf      # 软件版本配置
 ├── uninstall/
@@ -55,6 +67,22 @@ shell-utils/
 ├── examples/
 │   └── lnmp-setup.sh     # 示例脚本
 ├── test.sh                # 测试脚本
+├── security-baseline/     # 安全基线检查
+│   ├── security-baseline.sh
+│   ├── os/
+│   ├── database/
+│   ├── web/
+│   ├── docker/
+│   └── network/
+├── kubernetes/            # Kubernetes 工具
+│   ├── k8s-manage.sh
+│   ├── apps/
+│   ├── monitoring/
+│   ├── logging/
+│   ├── security/
+│   └── backup/
+├── docker-manager/        # Docker 管理
+├── docker-compose-templates/  # Docker Compose 模板
 ├── nginx/                 # Nginx
 ├── apache/                # Apache
 ├── php/                   # PHP（支持多版本）
@@ -84,7 +112,14 @@ shell-utils/
 ├── backup/               # 数据库备份
 ├── cleanup/              # 系统清理
 ├── tune-kernel/          # 内核调优
-└── dev-tools/            # 开发工具
+├── dev-tools/            # 开发工具
+├── haproxy/              # HAProxy
+├── keepalived/           # Keepalived
+├── nginx-deploy/         # Nginx 一键部署
+├── healthcheck/          # 健康检查
+├── mirror/               # 镜像源管理
+├── firewall/             # 防火墙管理
+└── bigdata/              # 大数据组件
 ```
 
 ## 📋 使用示例
@@ -188,6 +223,32 @@ sudo ./main.sh cleanup
 
 # 内核调优
 sudo ./main.sh tune-kernel
+
+# 安全基线检查
+sudo ./main.sh security        # 全部检查
+sudo ./main.sh security os     # 操作系统安全
+sudo ./main.sh security database  # 数据库安全
+
+# 日常巡检
+sudo ./main.sh daily           # 执行巡检
+sudo ./main.sh daily report    # 生成报告
+
+# 多版本管理
+sudo ./main.sh version list    # 列出软件
+sudo ./main.sh version versions nginx  # 查看 Nginx 版本
+sudo ./main.sh version set nginx 1.24  # 设置版本
+sudo ./main.sh version install php 8.2  # 安装指定版本
+
+# 快捷运维
+sudo ./main.sh ops cpu         # 查看 CPU 使用
+sudo ./main.sh ops mem         # 查看内存使用
+sudo ./main.sh ops logs nginx  # 查看 Nginx 日志
+sudo ./main.sh ops monitor     # 实时监控
+
+# 脚本升级
+sudo ./main.sh update check    # 检查更新
+sudo ./main.sh update          # 执行更新
+sudo ./main.sh update force    # 强制更新
 ```
 
 ## 🌐 支持的操作系统

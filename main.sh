@@ -121,6 +121,33 @@ ${YELLOW}健康检查与备份：${NC}
   backup [软件]     备份数据 (mysql/mongodb/redis/all)
   restore [软件]   恢复数据
 
+${YELLOW}安全扫描：${NC}
+  security          运行安全基线检查
+  security os       操作系统安全检查
+  security database 数据库安全检查
+  security web      Web 服务器安全检查
+  security docker   Docker 安全检查
+  security network  网络安全检查
+
+${YELLOW}日常巡检：${NC}
+  daily             执行日常巡检
+  daily check       仅检查不发送邮件
+  daily report      生成巡检报告
+
+${YELLOW}版本管理：${NC}
+  version list      列出支持的软件版本
+  version set <软件> <版本>  设置软件版本
+  version install <软件> <版本> 安装指定版本
+
+${YELLOW}快捷运维：${NC}
+  ops               显示快捷运维命令
+  ops <命令>        执行快捷运维命令
+
+${YELLOW}脚本升级：${NC}
+  update check      检查脚本更新
+  update           执行脚本更新
+  update force      强制更新脚本
+
 ${YELLOW}配置管理：${NC}
   config show       显示当前配置
   config set <key> <value>  设置配置项
@@ -568,6 +595,21 @@ main() {
             ;;
         dev-tools)
             install_software dev-tools
+            ;;
+        security)
+            bash "$SCRIPT_DIR/security-baseline/security-baseline.sh" "$@"
+            ;;
+        daily)
+            bash "$SCRIPT_DIR/daily-check.sh" "$@"
+            ;;
+        version)
+            bash "$SCRIPT_DIR/version.sh" "$@"
+            ;;
+        ops)
+            bash "$SCRIPT_DIR/ops.sh" "$@"
+            ;;
+        update)
+            bash "$SCRIPT_DIR/update.sh" "$@"
             ;;
         *)
             print_error "未知命令: $command"
