@@ -1,0 +1,55 @@
+version: '3.8'
+services:
+  mongo1:
+    image: mongo:7
+    container_name: mongo1
+    command: mongod --replSet rs0 --bind_ip_all
+    volumes:
+      - mongo1_data:/data/db
+    networks:
+      - mongonet
+    restart: always
+
+  mongo2:
+    image: mongo:7
+    container_name: mongo2
+    command: mongod --replSet rs0 --bind_ip_all
+    volumes:
+      - mongo2_data:/data/db
+    networks:
+      - mongonet
+    restart: always
+
+  mongo3:
+    image: mongo:7
+    container_name: mongo3
+    command: mongod --replSet rs0 --bind_ip_all
+    volumes:
+      - mongo3_data:/data/db
+    networks:
+      - mongonet
+    restart: always
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo_express
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo1,mongo2,mongo3
+      ME_CONFIG_MONGODB_URL: mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+    networks:
+      - mongonet
+    restart: always
+
+volumes:
+  mongo1_data:
+  mongo2_data:
+  mongo3_data:
+
+networks:
+  mongonet:

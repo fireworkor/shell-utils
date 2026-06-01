@@ -1,0 +1,52 @@
+version: '3.8'
+services:
+  crdb1:
+    image: cockroachdb/cockroach:latest
+    container_name: crdb1
+    command: start --insecure --advertise-addr=crdb1 --join=crdb1,crdb2,crdb3
+    ports:
+      - "26257:26257"
+      - "8080:8080"
+    volumes:
+      - crdb1_data:/cockroach/cockroach-data
+    networks:
+      - crdbnet
+    restart: always
+
+  crdb2:
+    image: cockroachdb/cockroach:latest
+    container_name: crdb2
+    command: start --insecure --advertise-addr=crdb2 --join=crdb1,crdb2,crdb3
+    ports:
+      - "26258:26257"
+      - "8081:8080"
+    volumes:
+      - crdb2_data:/cockroach/cockroach-data
+    depends_on:
+      - crdb1
+    networks:
+      - crdbnet
+    restart: always
+
+  crdb3:
+    image: cockroachdb/cockroach:latest
+    container_name: crdb3
+    command: start --insecure --advertise-addr=crdb3 --join=crdb1,crdb2,crdb3
+    ports:
+      - "26259:26257"
+      - "8082:8080"
+    volumes:
+      - crdb3_data:/cockroach/cockroach-data
+    depends_on:
+      - crdb1
+    networks:
+      - crdbnet
+    restart: always
+
+volumes:
+  crdb1_data:
+  crdb2_data:
+  crdb3_data:
+
+networks:
+  crdbnet:

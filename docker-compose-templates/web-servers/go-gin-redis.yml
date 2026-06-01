@@ -1,0 +1,50 @@
+version: '3.8'
+services:
+  goapp:
+    build: .
+    container_name: go_gin_app
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./app:/app
+    environment:
+      - REDIS_ADDR=redis:6379
+      - DB_HOST=postgres
+      - DB_USER=gouser
+      - DB_PASS=gopass
+      - DB_NAME=godb
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - gonet
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: go_redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - gonet
+    restart: always
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: go_postgres
+    environment:
+      POSTGRES_DB: godb
+      POSTGRES_USER: gouser
+      POSTGRES_PASSWORD: gopass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gonet
+    restart: always
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  gonet:

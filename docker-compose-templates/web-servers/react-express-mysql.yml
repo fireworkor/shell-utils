@@ -1,0 +1,54 @@
+version: '3.8'
+services:
+  frontend:
+    build:
+      context: ./frontend
+    container_name: react_frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - reactnet
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+    container_name: express_backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASS=root123456
+      - DB_NAME=react_app
+    depends_on:
+      - mysql
+    networks:
+      - reactnet
+    restart: always
+
+  mysql:
+    image: mysql:8.0
+    container_name: react_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: react_app
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - reactnet
+    restart: always
+
+volumes:
+  mysql_data:
+
+networks:
+  reactnet:

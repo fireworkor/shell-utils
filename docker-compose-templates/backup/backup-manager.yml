@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  backup:
+    image: offen/docker-volume-backup:latest
+    container_name: backup_manager
+    environment:
+      - BACKUP_CRON_EXPRESSION=0 2 * * *
+      - BACKUP_FILENAME=backup-%Y-%m-%d-%H-%M-%S.tar.gz
+      - BACKUP_RETENTION_DAYS=7
+      - AWS_ENDPOINT=https://s3.amazonaws.com
+      - AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+      - AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
+      - AWS_S3_BUCKET_NAME=your-backup-bucket
+      - AWS_S3_PATH=docker/
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - backup_storage:/archive
+      - vol-db:/backup/db:ro
+      - vol-app:/backup/app:ro
+    labels:
+      - docker-volume-backup.stop-during-backup=true
+    networks:
+      - backup
+    restart: always
+
+volumes:
+  backup_storage:
+  vol-db:
+  vol-app:
+
+networks:
+  backup:

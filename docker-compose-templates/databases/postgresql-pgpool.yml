@@ -1,0 +1,57 @@
+version: '3.8'
+services:
+  postgres1:
+    image: postgres:15-alpine
+    container_name: pg1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mydb
+      POSTGRES_REPLICATION_USER: repuser
+      POSTGRES_REPLICATION_PASSWORD: reppass
+    volumes:
+      - pg1_data:/var/lib/postgresql/data
+    networks:
+      - pgnet
+    restart: always
+
+  postgres2:
+    image: postgres:15-alpine
+    container_name: pg2
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    depends_on:
+      - postgres1
+    volumes:
+      - pg2_data:/var/lib/postgresql/data
+    networks:
+      - pgnet
+    restart: always
+
+  pgpool:
+    image: bitnami/pgpool:latest
+    container_name: pgpool
+    environment:
+      PGPOOL_BACKEND_NODES: 0:postgres1:5432,1:postgres2:5432
+      PGPOOL_SR_CHECK_USER: repuser
+      PGPOOL_SR_CHECK_PASSWORD: reppass
+      PGPOOL_POSTGRES_USERNAME: postgres
+      PGPOOL_POSTGRES_PASSWORD: postgres
+      PGPOOL_ADMIN_USERNAME: admin
+      PGPOOL_ADMIN_PASSWORD: adminpass
+    ports:
+      - "9999:9999"
+    depends_on:
+      - postgres1
+      - postgres2
+    networks:
+      - pgnet
+    restart: always
+
+volumes:
+  pg1_data:
+  pg2_data:
+
+networks:
+  pgnet:

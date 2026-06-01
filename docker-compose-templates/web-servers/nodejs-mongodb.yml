@@ -1,0 +1,48 @@
+version: '3.8'
+services:
+  nodeapp:
+    build: .
+    container_name: node_app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./app:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - MONGO_URL=mongodb://mongo:27017/nodeapp
+    depends_on:
+      - mongo
+    networks:
+      - appnet
+    restart: always
+
+  mongo:
+    image: mongo:7
+    container_name: mongo_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - appnet
+    restart: always
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo_express
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+    depends_on:
+      - mongo
+    networks:
+      - appnet
+    restart: always
+
+volumes:
+  mongo_data:
+
+networks:
+  appnet:

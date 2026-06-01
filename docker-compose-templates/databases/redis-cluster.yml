@@ -1,0 +1,90 @@
+version: '3.8'
+services:
+  redis1:
+    image: redis:7-alpine
+    container_name: redis1
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes
+    volumes:
+      - redis1_data:/data
+    ports:
+      - "6379:6379"
+      - "16379:16379"
+    networks:
+      - redisnet
+    restart: always
+
+  redis2:
+    image: redis:7-alpine
+    container_name: redis2
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes
+    volumes:
+      - redis2_data:/data
+    ports:
+      - "6380:6379"
+      - "16380:16379"
+    networks:
+      - redisnet
+    restart: always
+
+  redis3:
+    image: redis:7-alpine
+    container_name: redis3
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes
+    volumes:
+      - redis3_data:/data
+    ports:
+      - "6381:6379"
+      - "16381:16379"
+    networks:
+      - redisnet
+    restart: always
+
+  redis4:
+    image: redis:7-alpine
+    container_name: redis4
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes
+    volumes:
+      - redis4_data:/data
+    ports:
+      - "6382:6379"
+      - "16382:16379"
+    networks:
+      - redisnet
+    restart: always
+
+  redis5:
+    image: redis:7-alpine
+    container_name: redis5
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes
+    volumes:
+      - redis5_data:/data
+    ports:
+      - "6383:6379"
+      - "16383:16379"
+    networks:
+      - redisnet
+    restart: always
+
+  redis6:
+    image: redis:7-alpine
+    container_name: redis6
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes
+    volumes:
+      - redis6_data:/data
+    ports:
+      - "6384:6379"
+      - "16384:16379"
+    networks:
+      - redisnet
+    restart: always
+
+volumes:
+  redis1_data:
+  redis2_data:
+  redis3_data:
+  redis4_data:
+  redis5_data:
+  redis6_data:
+
+networks:
+  redisnet:

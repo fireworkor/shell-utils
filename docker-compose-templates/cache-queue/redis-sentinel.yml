@@ -1,0 +1,87 @@
+version: '3.8'
+services:
+  redis-master:
+    image: redis:7-alpine
+    container_name: redis_master
+    command: redis-server --requirepass masterpass
+    ports:
+      - "6379:6379"
+    volumes:
+      - master_data:/data
+    networks:
+      - redisnet
+    restart: always
+
+  redis-slave1:
+    image: redis:7-alpine
+    container_name: redis_slave1
+    command: redis-server --slaveof redis-master 6379 --masterauth masterpass --requirepass slavepass
+    depends_on:
+      - redis-master
+    volumes:
+      - slave1_data:/data
+    networks:
+      - redisnet
+    restart: always
+
+  redis-slave2:
+    image: redis:7-alpine
+    container_name: redis_slave2
+    command: redis-server --slaveof redis-master 6379 --masterauth masterpass --requirepass slavepass
+    depends_on:
+      - redis-master
+    volumes:
+      - slave2_data:/data
+    networks:
+      - redisnet
+    restart: always
+
+  sentinel1:
+    image: redis:7-alpine
+    container_name: redis_sentinel1
+    command: redis-sentinel /usr/local/etc/redis/sentinel.conf
+    volumes:
+      - ./sentinel1.conf:/usr/local/etc/redis/sentinel.conf
+    depends_on:
+      - redis-master
+      - redis-slave1
+      - redis-slave2
+    networks:
+      - redisnet
+    restart: always
+
+  sentinel2:
+    image: redis:7-alpine
+    container_name: redis_sentinel2
+    command: redis-sentinel /usr/local/etc/redis/sentinel.conf
+    volumes:
+      - ./sentinel2.conf:/usr/local/etc/redis/sentinel.conf
+    depends_on:
+      - redis-master
+      - redis-slave1
+      - redis-slave2
+    networks:
+      - redisnet
+    restart: always
+
+  sentinel3:
+    image: redis:7-alpine
+    container_name: redis_sentinel3
+    command: redis-sentinel /usr/local/etc/redis/sentinel.conf
+    volumes:
+      - ./sentinel3.conf:/usr/local/etc/redis/sentinel.conf
+    depends_on:
+      - redis-master
+      - redis-slave1
+      - redis-slave2
+    networks:
+      - redisnet
+    restart: always
+
+volumes:
+  master_data:
+  slave1_data:
+  slave2_data:
+
+networks:
+  redisnet:

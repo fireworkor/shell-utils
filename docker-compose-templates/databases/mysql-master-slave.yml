@@ -1,0 +1,40 @@
+version: '3.8'
+services:
+  master:
+    image: mysql:8.0
+    container_name: mysql_master
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_REPLICATION_USER: repl
+      MYSQL_REPLICATION_PASSWORD: replpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - master_data:/var/lib/mysql
+      - ./master/my.cnf:/etc/mysql/conf.d/my.cnf
+    networks:
+      - mysqlnet
+    restart: always
+
+  slave:
+    image: mysql:8.0
+    container_name: mysql_slave
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_REPLICATION_USER: repl
+      MYSQL_REPLICATION_PASSWORD: replpass
+    depends_on:
+      - master
+    volumes:
+      - slave_data:/var/lib/mysql
+      - ./slave/my.cnf:/etc/mysql/conf.d/my.cnf
+    networks:
+      - mysqlnet
+    restart: always
+
+volumes:
+  master_data:
+  slave_data:
+
+networks:
+  mysqlnet:

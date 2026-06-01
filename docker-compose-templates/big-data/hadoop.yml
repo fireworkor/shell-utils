@@ -1,0 +1,104 @@
+version: '3.8'
+services:
+  namenode:
+    image: apache/hadoop:3.3.6
+    container_name: namenode
+    hostname: namenode
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+    environment:
+      - HADOOP_OPTS=-Dfs.defaultFS=hdfs://namenode:9000
+    volumes:
+      - namenode_data:/opt/hadoop/data/namenode
+    networks:
+      - hadoop
+    command: bash -c "hdfs namenode -format && hdfs namenode"
+    restart: always
+
+  datanode1:
+    image: apache/hadoop:3.3.6
+    container_name: datanode1
+    hostname: datanode1
+    depends_on:
+      - namenode
+    ports:
+      - "9864:9864"
+    environment:
+      - HADOOP_OPTS=-Dfs.defaultFS=hdfs://namenode:9000
+    volumes:
+      - datanode1_data:/opt/hadoop/data/datanode
+    networks:
+      - hadoop
+    command: hdfs datanode
+    restart: always
+
+  datanode2:
+    image: apache/hadoop:3.3.6
+    container_name: datanode2
+    hostname: datanode2
+    depends_on:
+      - namenode
+    ports:
+      - "9865:9864"
+    environment:
+      - HADOOP_OPTS=-Dfs.defaultFS=hdfs://namenode:9000
+    volumes:
+      - datanode2_data:/opt/hadoop/data/datanode
+    networks:
+      - hadoop
+    command: hdfs datanode
+    restart: always
+
+  datanode3:
+    image: apache/hadoop:3.3.6
+    container_name: datanode3
+    hostname: datanode3
+    depends_on:
+      - namenode
+    ports:
+      - "9866:9864"
+    environment:
+      - HADOOP_OPTS=-Dfs.defaultFS=hdfs://namenode:9000
+    volumes:
+      - datanode3_data:/opt/hadoop/data/datanode
+    networks:
+      - hadoop
+    command: hdfs datanode
+    restart: always
+
+  yarn-resourcemanager:
+    image: apache/hadoop:3.3.6
+    container_name: resourcemanager
+    hostname: resourcemanager
+    depends_on:
+      - namenode
+    ports:
+      - "8088:8088"
+      - "8032:8032"
+    networks:
+      - hadoop
+    command: yarn resourcemanager
+    restart: always
+
+  yarn-nodemanager:
+    image: apache/hadoop:3.3.6
+    container_name: nodemanager
+    hostname: nodemanager
+    depends_on:
+      - yarn-resourcemanager
+    ports:
+      - "8042:8042"
+    networks:
+      - hadoop
+    command: yarn nodemanager
+    restart: always
+
+volumes:
+  namenode_data:
+  datanode1_data:
+  datanode2_data:
+  datanode3_data:
+
+networks:
+  hadoop:

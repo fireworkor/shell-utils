@@ -1,0 +1,81 @@
+version: '3.8'
+services:
+  node1:
+    image: mariadb:10.11
+    container_name: galera1
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_USER: galera
+      MYSQL_PASSWORD: galerapass
+      MYSQL_DATABASE: galera_db
+      MARIADB_GALERA_CLUSTER_NAME: galera_cluster
+      MARIADB_GALERA_CLUSTER_ADDRESS: gcomm://node1,node2,node3
+      MARIADB_GALERA_NODE_ADDRESS: node1
+      MARIADB_GALERA_MARIABACKUP_USER: mariabackup
+      MARIADB_GALERA_MARIABACKUP_PASSWORD: backuppass
+    volumes:
+      - galera1_data:/var/lib/mysql
+    networks:
+      - galera
+    restart: always
+
+  node2:
+    image: mariadb:10.11
+    container_name: galera2
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MARIADB_GALERA_CLUSTER_NAME: galera_cluster
+      MARIADB_GALERA_CLUSTER_ADDRESS: gcomm://node1,node2,node3
+      MARIADB_GALERA_NODE_ADDRESS: node2
+      MARIADB_GALERA_MARIABACKUP_USER: mariabackup
+      MARIADB_GALERA_MARIABACKUP_PASSWORD: backuppass
+    volumes:
+      - galera2_data:/var/lib/mysql
+    depends_on:
+      - node1
+    networks:
+      - galera
+    restart: always
+
+  node3:
+    image: mariadb:10.11
+    container_name: galera3
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MARIADB_GALERA_CLUSTER_NAME: galera_cluster
+      MARIADB_GALERA_CLUSTER_ADDRESS: gcomm://node1,node2,node3
+      MARIADB_GALERA_NODE_ADDRESS: node3
+      MARIADB_GALERA_MARIABACKUP_USER: mariabackup
+      MARIADB_GALERA_MARIABACKUP_PASSWORD: backuppass
+    volumes:
+      - galera3_data:/var/lib/mysql
+    depends_on:
+      - node1
+    networks:
+      - galera
+    restart: always
+
+  maxscale:
+    image: mariadb/maxscale:latest
+    container_name: maxscale
+    ports:
+      - "4006:4006"
+      - "8989:8989"
+    environment:
+      MAXSCALE_USER: maxscale
+      MAXSCALE_PASSWORD: maxscalepass
+    depends_on:
+      - node1
+      - node2
+      - node3
+    networks:
+      - galera
+    restart: always
+
+volumes:
+  galera1_data:
+  galera2_data:
+  galera3_data:
+
+networks:
+  galera:

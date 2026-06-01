@@ -1,0 +1,45 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: mm_db
+    environment:
+      POSTGRES_USER: mattermost
+      POSTGRES_PASSWORD: mattermost
+      POSTGRES_DB: mattermost
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mattermost
+    restart: always
+
+  mattermost:
+    image: mattermost/mattermost-team-edition:latest
+    container_name: mattermost
+    depends_on:
+      - db
+    ports:
+      - "8065:8065"
+    environment:
+      MM_SQLSETTINGS_DRIVERNAME: postgres
+      MM_SQLSETTINGS_DATASOURCE: postgres://mattermost:mattermost@db:5432/mattermost?sslmode=disable&connect_timeout=10
+    volumes:
+      - mattermost_config:/mattermost/config
+      - mattermost_data:/mattermost/data
+      - mattermost_logs:/mattermost/logs
+      - mattermost_plugins:/mattermost/client/plugins
+      - mattermost_plugins_server:/mattermost/plugins
+    networks:
+      - mattermost
+    restart: always
+
+volumes:
+  postgres_data:
+  mattermost_config:
+  mattermost_data:
+  mattermost_logs:
+  mattermost_plugins:
+  mattermost_plugins_server:
+
+networks:
+  mattermost:
