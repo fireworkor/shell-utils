@@ -93,6 +93,41 @@
             .sidebar { width: 100%; height: auto; }
             .main { flex-direction: column; }
         }
+        
+        /* 最小化日志悬浮窗 */
+        .minimized-log-item {
+            background: #2c3e50;
+            color: white;
+            padding: 8px 14px;
+            border-radius: 6px;
+            margin-top: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-width: 200px;
+        }
+        .minimized-log-item:hover { background: #34495e; }
+        .minimized-log-item .log-status { font-size: 11px; opacity: 0.7; }
+        .minimized-log-item .log-close { margin-left: 10px; opacity: 0.5; cursor: pointer; }
+        .minimized-log-item .log-close:hover { opacity: 1; }
+        
+        /* 安装队列 */
+        .queue-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 14px;
+        }
+        .queue-item:last-child { border-bottom: none; }
+        .queue-status { margin-left: auto; }
+        .queue-status.running { color: #3498db; }
+        .queue-status.waiting { color: #f39c12; }
+        .queue-status.done { color: #27ae60; }
+        .queue-status.failed { color: #e74c3c; }
     </style>
 </head>
 <body>
@@ -210,56 +245,17 @@
             <div id="page-services" class="page" style="display:none">
                 <div class="card">
                     <div class="card-title">⚙️ 服务管理</div>
+                    <div style="margin-bottom:12px;">
+                        <input type="text" id="service-search" placeholder="搜索服务..." 
+                               style="padding:8px;width:250px;margin-right:12px;" oninput="filterServices()">
+                        <button class="btn btn-primary" onclick="loadServices()">刷新</button>
+                    </div>
                     <table class="table">
                         <thead>
                             <tr><th>服务名称</th><th>状态</th><th>操作</th></tr>
                         </thead>
                         <tbody id="services-body">
-                            <tr>
-                                <td>Nginx</td>
-                                <td><span class="status-badge" id="nginx-status">--</span></td>
-                                <td>
-                                    <button class="btn btn-success" onclick="controlService('start', 'nginx')">启动</button>
-                                    <button class="btn btn-warning" onclick="controlService('stop', 'nginx')">停止</button>
-                                    <button class="btn btn-primary" onclick="controlService('restart', 'nginx')">重启</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>MySQL</td>
-                                <td><span class="status-badge" id="mysql-status">--</span></td>
-                                <td>
-                                    <button class="btn btn-success" onclick="controlService('start', 'mysql')">启动</button>
-                                    <button class="btn btn-warning" onclick="controlService('stop', 'mysql')">停止</button>
-                                    <button class="btn btn-primary" onclick="controlService('restart', 'mysql')">重启</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Redis</td>
-                                <td><span class="status-badge" id="redis-status">--</span></td>
-                                <td>
-                                    <button class="btn btn-success" onclick="controlService('start', 'redis')">启动</button>
-                                    <button class="btn btn-warning" onclick="controlService('stop', 'redis')">停止</button>
-                                    <button class="btn btn-primary" onclick="controlService('restart', 'redis')">重启</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Docker</td>
-                                <td><span class="status-badge" id="docker-status">--</span></td>
-                                <td>
-                                    <button class="btn btn-success" onclick="controlService('start', 'docker')">启动</button>
-                                    <button class="btn btn-warning" onclick="controlService('stop', 'docker')">停止</button>
-                                    <button class="btn btn-primary" onclick="controlService('restart', 'docker')">重启</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>SSH</td>
-                                <td><span class="status-badge" id="sshd-status">--</span></td>
-                                <td>
-                                    <button class="btn btn-success" onclick="controlService('start', 'sshd')">启动</button>
-                                    <button class="btn btn-warning" onclick="controlService('stop', 'sshd')">停止</button>
-                                    <button class="btn btn-primary" onclick="controlService('restart', 'sshd')">重启</button>
-                                </td>
-                            </tr>
+                            <tr><td colspan="3" style="text-align:center;color:#7f8c8d;">加载中...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -278,9 +274,22 @@
                     </div>
                 </div>
                 
+                <!-- 安装任务队列 -->
+                <div class="card" id="install-queue-card" style="display:none;">
+                    <div class="card-title">📋 安装任务队列 <span id="queue-count" style="font-size:14px;color:#7f8c8d;"></span></div>
+                    <div id="install-queue-list"></div>
+                </div>
+                
                 <div class="card">
                     <div class="card-title">📋 已安装软件</div>
-                    <div class="software-grid" id="installed-software-grid"></div>
+                    <table class="table">
+                        <thead>
+                            <tr><th>软件名称</th><th>版本</th><th>状态</th><th>操作</th></tr>
+                        </thead>
+                        <tbody id="installed-software-grid">
+                            <tr><td colspan="4" style="text-align:center;color:#7f8c8d;">加载中...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
             
@@ -386,13 +395,24 @@
     
     <!-- 模态框 -->
     <div class="modal" id="modal">
-        <div class="modal-content">
-            <div class="modal-header" id="modal-title"></div>
+        <div class="modal-content" id="modal-box">
+            <div class="modal-header" id="modal-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span id="modal-title-text"></span>
+                <div>
+                    <button class="btn" id="modal-minimize-btn" onclick="minimizeModal()" style="padding:4px 10px;font-size:12px;display:none;margin-right:8px;">最小化</button>
+                    <button class="btn" onclick="closeModal()" style="padding:4px 10px;font-size:12px;">✕</button>
+                </div>
+            </div>
             <div class="modal-body" id="modal-body"></div>
-            <div class="modal-footer">
+            <div class="modal-footer" id="modal-footer">
                 <button class="btn btn-primary" onclick="closeModal()">确定</button>
             </div>
         </div>
+    </div>
+    
+    <!-- 最小化日志悬浮窗 -->
+    <div id="minimized-logs" style="display:none;position:fixed;bottom:20px;right:20px;z-index:999;">
+        <div id="minimized-log-items"></div>
     </div>
     
     <!-- Socket.IO -->
@@ -401,6 +421,9 @@
         let currentPage = 'dashboard';
         let socket = null;
         let currentInstallTask = null;
+        let allServicesData = [];
+        let installTasks = {};  // task_id -> {software, status}
+        let minimizedTasks = {}; // task_id -> {title, status}
         
         // 初始化Socket.IO连接
         function initSocket() {
@@ -419,21 +442,37 @@
                             output.scrollTop = output.scrollHeight;
                         }
                     }
+                    // 更新最小化悬浮窗状态
+                    if (minimizedTasks[data.task_id]) {
+                        minimizedTasks[data.task_id].status = 'running';
+                        updateMinimizedLogs();
+                    }
                 });
                 
                 socket.on('install_complete', function(data) {
                     if (currentInstallTask === data.task_id) {
                         const output = document.getElementById('install-log-output');
-                        if (data.success) {
-                            output.textContent += '\n✅ 安装完成！\n';
-                            setTimeout(function() {
-                                loadInstalledSoftware();
-                                closeModal();
-                            }, 2000);
-                        } else {
-                            output.textContent += '\n❌ 安装失败: ' + (data.error || '未知错误') + '\n';
+                        if (output) {
+                            if (data.success) {
+                                output.textContent += '\n✅ 完成！\n';
+                                setTimeout(function() {
+                                    loadInstalledSoftware();
+                                    closeModal();
+                                }, 2000);
+                            } else {
+                                output.textContent += '\n❌ 失败: ' + (data.error || '未知错误') + '\n';
+                            }
                         }
                     }
+                    // 更新任务状态
+                    if (installTasks[data.task_id]) {
+                        installTasks[data.task_id].status = data.success ? 'done' : 'failed';
+                    }
+                    if (minimizedTasks[data.task_id]) {
+                        minimizedTasks[data.task_id].status = data.success ? 'done' : 'failed';
+                        updateMinimizedLogs();
+                    }
+                    updateQueueDisplay();
                 });
             }
         }
@@ -522,33 +561,57 @@
         
         function loadServices() {
             fetch('/api/services').then(r => r.json()).then(data => {
+                allServicesData = data;
+                renderServices(data);
+                
+                // 更新仪表盘服务表
                 const tableBody = document.getElementById('services-table-body');
                 tableBody.innerHTML = '';
-                
                 let activeCount = 0;
                 data.forEach(service => {
                     const statusClass = service.status === 'active' ? 'status-active' : service.status === 'inactive' ? 'status-inactive' : 'status-unknown';
                     if (service.status === 'active') activeCount++;
-                    
                     tableBody.innerHTML += `
                         <tr>
                             <td>${service.name}</td>
                             <td><span class="status-badge ${statusClass}">${service.status}</span></td>
                             <td>-</td>
-                        </tr>
-                    `;
+                        </tr>`;
                 });
-                
-                document.getElementById('active-services').textContent = activeCount + '/5';
-                
-                data.forEach(service => {
-                    const badge = document.getElementById(`${service.name}-status`);
-                    if (badge) {
-                        badge.className = `status-badge ${service.status === 'active' ? 'status-active' : service.status === 'inactive' ? 'status-inactive' : 'status-unknown'}`;
-                        badge.textContent = service.status;
-                    }
-                });
+                const el = document.getElementById('active-services');
+                if (el) el.textContent = activeCount + '/' + data.length;
             });
+        }
+        
+        function renderServices(data) {
+            const tableBody = document.getElementById('services-body');
+            const search = (document.getElementById('service-search').value || '').toLowerCase();
+            const filtered = search ? data.filter(s => s.name.toLowerCase().includes(search)) : data;
+            
+            if (filtered.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#7f8c8d;">无匹配服务</td></tr>';
+                return;
+            }
+            
+            tableBody.innerHTML = '';
+            filtered.forEach(service => {
+                const statusClass = service.status === 'active' ? 'status-active' : service.status === 'inactive' ? 'status-inactive' : 'status-unknown';
+                const statusText = service.status === 'active' ? '运行中' : service.status === 'inactive' ? '已停止' : service.status;
+                tableBody.innerHTML += `
+                    <tr>
+                        <td>${service.name}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td>
+                            <button class="btn btn-success" style="padding:4px 10px;font-size:12px;" onclick="controlService('start', '${service.name}')">启动</button>
+                            <button class="btn btn-warning" style="padding:4px 10px;font-size:12px;" onclick="controlService('stop', '${service.name}')">停止</button>
+                            <button class="btn btn-primary" style="padding:4px 10px;font-size:12px;" onclick="controlService('restart', '${service.name}')">重启</button>
+                        </td>
+                    </tr>`;
+            });
+        }
+        
+        function filterServices() {
+            renderServices(allServicesData);
         }
         
         function loadSoftwareList() {
@@ -568,18 +631,35 @@
                 const grid = document.getElementById('installed-software-grid');
                 grid.innerHTML = '';
                 
-                data.forEach(item => {
+                const installed = data.filter(s => s.status === 'installed');
+                const notInstalled = data.filter(s => s.status !== 'installed');
+                
+                if (installed.length === 0 && notInstalled.length === 0) {
+                    grid.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#7f8c8d;">无软件信息</td></tr>';
+                    return;
+                }
+                
+                installed.forEach(sw => {
                     grid.innerHTML += `
-                        <div class="software-card">
-                            <div class="name">${item.name}</div>
-                            <div class="version">${item.version}</div>
-                            <div class="status">
-                                <span class="status-badge ${item.status === 'installed' ? 'status-active' : 'status-inactive'}">
-                                    ${item.status === 'installed' ? '已安装' : '未安装'}
-                                </span>
-                            </div>
-                        </div>
-                    `;
+                        <tr>
+                            <td><span class="status-badge status-active">${sw.name}</span></td>
+                            <td style="font-size:12px;">${sw.version || '--'}</td>
+                            <td><span class="status-badge status-active">已安装</span></td>
+                            <td>
+                                <button class="btn btn-warning" style="padding:4px 10px;font-size:12px;" 
+                                    onclick="uninstallSoftware('${sw.name}')">卸载</button>
+                            </td>
+                        </tr>`;
+                });
+                
+                notInstalled.forEach(sw => {
+                    grid.innerHTML += `
+                        <tr style="opacity:0.5;">
+                            <td>${sw.name}</td>
+                            <td style="font-size:12px;">--</td>
+                            <td><span class="status-badge status-inactive">未安装</span></td>
+                            <td>-</td>
+                        </tr>`;
                 });
             });
         }
@@ -629,9 +709,9 @@
                 return;
             }
             
-            // 显示安装日志模态框
+            // 显示安装日志模态框（带最小化按钮）
             const logOutput = '<pre class="output-box" id="install-log-output" style="max-height: 400px;">正在安装 ' + software + '...\n</pre>';
-            showModal('📦 安装 ' + software, logOutput);
+            showModal('📦 安装 ' + software, logOutput, true);
             
             fetch('/api/software/install', {
                 method: 'POST',
@@ -640,11 +720,126 @@
             }).then(r => r.json()).then(data => {
                 if (data.success && data.task_id) {
                     currentInstallTask = data.task_id;
+                    installTasks[data.task_id] = { software, status: 'running' };
+                    updateQueueDisplay();
                 } else {
-                    document.getElementById('install-log-output').textContent += '❌ 启动安装失败: ' + (data.error || '未知错误') + '\n';
+                    const output = document.getElementById('install-log-output');
+                    if (output) output.textContent += '❌ 启动安装失败: ' + (data.error || '未知错误') + '\n';
                 }
             }).catch(err => {
-                document.getElementById('install-log-output').textContent += '❌ 请求失败: ' + err.message + '\n';
+                const output = document.getElementById('install-log-output');
+                if (output) output.textContent += '❌ 请求失败: ' + err.message + '\n';
+            });
+        }
+        
+        function uninstallSoftware(software) {
+            if (!confirm('确定要卸载 ' + software + ' 吗？')) return;
+            
+            const logOutput = '<pre class="output-box" id="install-log-output" style="max-height: 400px;">正在卸载 ' + software + '...\n</pre>';
+            showModal('🗑️ 卸载 ' + software, logOutput, true);
+            
+            fetch('/api/software/uninstall', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ software })
+            }).then(r => r.json()).then(data => {
+                if (data.success && data.task_id) {
+                    currentInstallTask = data.task_id;
+                    installTasks[data.task_id] = { software, status: 'running' };
+                } else {
+                    const output = document.getElementById('install-log-output');
+                    if (output) output.textContent += '❌ 启动卸载失败: ' + (data.error || '未知错误') + '\n';
+                }
+            }).catch(err => {
+                const output = document.getElementById('install-log-output');
+                if (output) output.textContent += '❌ 请求失败: ' + err.message + '\n';
+            });
+        }
+        
+        function minimizeModal() {
+            if (!currentInstallTask) return;
+            
+            const title = document.getElementById('modal-title-text').textContent;
+            const status = installTasks[currentInstallTask]?.status || 'running';
+            
+            minimizedTasks[currentInstallTask] = { title, status, task_id: currentInstallTask };
+            updateMinimizedLogs();
+            
+            document.getElementById('modal').style.display = 'none';
+            currentInstallTask = null;
+        }
+        
+        function restoreFromMinimized(taskId) {
+            const task = minimizedTasks[taskId];
+            if (!task) return;
+            
+            // 恢复模态框
+            const logs = install_logs_global?.[taskId] || [];
+            const logContent = logs.length > 0 
+                ? logs.join('\n') 
+                : (task.status === 'running' ? '任务执行中...' : '任务已完成');
+            
+            showModal(task.title, '<pre class="output-box" id="install-log-output" style="max-height:400px;">' + logContent + '\n</pre>', true);
+            currentInstallTask = taskId;
+            
+            delete minimizedTasks[taskId];
+            updateMinimizedLogs();
+        }
+        
+        function removeMinimizedTask(taskId) {
+            delete minimizedTasks[taskId];
+            updateMinimizedLogs();
+        }
+        
+        function updateMinimizedLogs() {
+            const container = document.getElementById('minimized-logs');
+            const items = document.getElementById('minimized-log-items');
+            
+            if (!items) return;
+            
+            const keys = Object.keys(minimizedTasks);
+            if (keys.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'block';
+            items.innerHTML = '';
+            
+            keys.forEach(taskId => {
+                const task = minimizedTasks[taskId];
+                const statusIcon = task.status === 'running' ? '🔄' : task.status === 'done' ? '✅' : '❌';
+                items.innerHTML += `
+                    <div class="minimized-log-item" onclick="restoreFromMinimized('${taskId}')">
+                        <span>${statusIcon} ${task.title}</span>
+                        <span class="log-close" onclick="event.stopPropagation();removeMinimizedTask('${taskId}')">✕</span>
+                    </div>`;
+            });
+        }
+        
+        function updateQueueDisplay() {
+            const card = document.getElementById('install-queue-card');
+            const list = document.getElementById('install-queue-list');
+            const count = document.getElementById('queue-count');
+            
+            const tasks = Object.values(installTasks);
+            if (tasks.length === 0) {
+                card.style.display = 'none';
+                return;
+            }
+            
+            card.style.display = 'block';
+            count.textContent = `(${tasks.length} 个任务)`;
+            
+            list.innerHTML = '';
+            tasks.forEach(task => {
+                const statusClass = task.status === 'running' ? 'running' : task.status === 'done' ? 'done' : task.status === 'failed' ? 'failed' : 'waiting';
+                const statusText = task.status === 'running' ? '执行中' : task.status === 'done' ? '已完成' : task.status === 'failed' ? '失败' : '等待中';
+                list.innerHTML += `
+                    <div class="queue-item">
+                        <span>📦 ${task.software}</span>
+                        <span class="queue-status ${statusClass}">${statusText}</span>
+                    </div>`;
             });
         }
         
@@ -796,14 +991,16 @@
             });
         }
         
-        function showModal(title, body) {
-            document.getElementById('modal-title').textContent = title;
+        function showModal(title, body, showMinimize) {
+            document.getElementById('modal-title-text').textContent = title;
             document.getElementById('modal-body').innerHTML = body;
+            document.getElementById('modal-minimize-btn').style.display = showMinimize ? 'inline-block' : 'none';
             document.getElementById('modal').classList.add('show');
         }
         
         function closeModal() {
             document.getElementById('modal').classList.remove('show');
+            currentInstallTask = null;
         }
         
         function updateTime() {

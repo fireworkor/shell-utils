@@ -24,6 +24,11 @@ SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # 存储安装日志
 install_logs = {}
 
+# 安装任务队列
+install_queue = []
+install_queue_running = False
+install_queue_lock = threading.Lock()
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -42,14 +47,32 @@ def system_info():
 
 @app.route('/api/services')
 def services():
-    services = [
-        {'name': 'nginx', 'status': get_service_status('nginx')},
-        {'name': 'mysql', 'status': get_service_status('mysql')},
-        {'name': 'redis', 'status': get_service_status('redis')},
-        {'name': 'docker', 'status': get_service_status('docker')},
-        {'name': 'sshd', 'status': get_service_status('sshd')},
-    ]
-    return jsonify(services)
+    # 动态获取系统中所有启用的服务
+    try:
+        result = subprocess.run(
+            ['systemctl', 'list-unit-files', '--type=service', '--state=enabled', '--no-pager'],
+            capture_output=True, text=True
+        )
+        service_list = []
+        for line in result.stdout.strip().split('\n')[1:]:  # 跳过表头
+            parts = line.split()
+            if len(parts) >= 1:
+                name = parts[0].replace('.service', '')
+                service_list.append({'name': name, 'status': get_service_status(name)})
+        return jsonify(service_list)
+    except Exception as e:
+        # 回退到基础服务列表
+        fallback = [
+            {'name': 'nginx', 'status': get_service_status('nginx')},
+            {'name': 'mysqld', 'status': get_service_status('mysqld')},
+            {'name': 'mariadb', 'status': get_service_status('mariadb')},
+            {'name': 'redis', 'status': get_service_status('redis')},
+            {'name': 'docker', 'status': get_service_status('docker')},
+            {'name': 'sshd', 'status': get_service_status('sshd')},
+            {'name': 'firewalld', 'status': get_service_status('firewalld')},
+            {'name': 'crond', 'status': get_service_status('crond')},
+        ]
+        return jsonify(fallback)
 
 def get_service_status(service):
     try:
@@ -329,6 +352,144 @@ def install_software():
     thread.start()
     
     return jsonify({'success': True, 'task_id': task_id})
+
+@app.route('/api/software/uninstall', methods=['POST'])
+def uninstall_software():
+    data = request.json
+    software = data.get('software')
+    task_id = f'uninstall_{software}_{int(time.time())}'
+    
+    if not software:
+        return jsonify({'success': False, 'error': '请指定要卸载的软件'})
+    
+    def run_uninstall():
+        try:
+            install_logs[task_id] = []
+            
+            def emit_log(line):
+                install_logs[task_id].append(line.rstrip())
+                socketio.emit('install_log', {'task_id': task_id, 'line': line.rstrip()})
+            
+            emit_log(f'开始卸载 {software}...')
+            
+            # 检查卸载脚本
+            uninstall_script = os.path.join(SCRIPT_DIR, 'uninstall', 'uninstall.sh')
+            if not os.path.isfile(uninstall_script):
+                emit_log('未找到卸载脚本，尝试通过包管理器卸载...')
+                # 尝试通过包管理器卸载
+                pkg_map = {
+                    'nginx': 'nginx', 'mysql': 'mysql-server', 'mariadb': 'mariadb-server',
+                    'redis': 'redis-server', 'php': 'php', 'python': 'python3',
+                    'nodejs': 'nodejs', 'docker': 'docker-ce', 'java': 'java',
+                    'mongodb': 'mongodb-org', 'postgresql': 'postgresql',
+                    'vsftpd': 'vsftpd', 'samba': 'samba', 'nfs': 'nfs-kernel-server',
+                }
+                pkg_name = pkg_map.get(software, software)
+                
+                for cmd in [
+                    ['yum', 'remove', '-y', pkg_name],
+                    ['dnf', 'remove', '-y', pkg_name],
+                    ['apt', 'remove', '-y', pkg_name],
+                ]:
+                    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                           text=True, bufsize=1, universal_newlines=True)
+                    for line in iter(process.stdout.readline, ''):
+                        if line:
+                            emit_log(line.rstrip())
+                    process.wait()
+                    if process.returncode == 0:
+                        break
+            else:
+                cmd = ['bash', uninstall_script, software]
+                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                         text=True, bufsize=1, universal_newlines=True)
+                for line in iter(process.stdout.readline, ''):
+                    if line:
+                        emit_log(line.rstrip())
+                process.wait()
+            
+            success = process.returncode == 0
+            socketio.emit('install_complete', {
+                'task_id': task_id,
+                'success': success,
+                'logs': install_logs[task_id]
+            })
+        except Exception as e:
+            error_msg = str(e)
+            install_logs[task_id].append(f'Error: {error_msg}')
+            socketio.emit('install_complete', {
+                'task_id': task_id,
+                'success': False,
+                'error': error_msg,
+                'logs': install_logs[task_id]
+            })
+    
+    thread = threading.Thread(target=run_uninstall)
+    thread.start()
+    
+    return jsonify({'success': True, 'task_id': task_id})
+
+@app.route('/api/software/queue')
+def install_queue_status():
+    """获取安装队列状态"""
+    return jsonify({
+        'queue': [{'software': item['software'], 'task_id': item['task_id'], 'status': item['status']} 
+                  for item in install_queue],
+        'running': install_queue_running
+    })
+
+def process_install_queue():
+    """处理安装任务队列"""
+    global install_queue_running
+    with install_queue_lock:
+        if install_queue_running:
+            return
+        install_queue_running = True
+    
+    while True:
+        with install_queue_lock:
+            if not install_queue:
+                install_queue_running = False
+                break
+            task = install_queue.pop(0)
+            task['status'] = 'running'
+        
+        # 执行安装
+        try:
+            cmd = [f'{SCRIPT_DIR}/main.sh', 'install', task['software']]
+            if task.get('version'):
+                cmd.append(task['version'])
+            
+            install_logs[task['task_id']] = []
+            
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                     text=True, bufsize=1, universal_newlines=True)
+            
+            for line in iter(process.stdout.readline, ''):
+                if line:
+                    install_logs[task['task_id']].append(line.rstrip())
+                    socketio.emit('install_log', {'task_id': task['task_id'], 'line': line.rstrip()})
+            
+            process.wait()
+            
+            success = process.returncode == 0
+            task['status'] = 'done'
+            socketio.emit('install_complete', {
+                'task_id': task['task_id'],
+                'success': success,
+                'logs': install_logs[task['task_id']]
+            })
+        except Exception as e:
+            task['status'] = 'done'
+            socketio.emit('install_complete', {
+                'task_id': task['task_id'],
+                'success': False,
+                'error': str(e),
+                'logs': install_logs.get(task['task_id'], [])
+            })
+    
+    with install_queue_lock:
+        install_queue_running = False
 
 @app.route('/api/backup', methods=['POST'])
 def backup():
