@@ -38,16 +38,29 @@ ${YELLOW}数据库：${NC}
   mariadb           安装 MariaDB
   mysql             安装 MySQL
   postgresql        安装 PostgreSQL
+  mongodb           安装 MongoDB
+  sqlite            安装 SQLite
+  elasticsearch     安装 Elasticsearch
+  clickhouse        安装 ClickHouse
 
 ${YELLOW}编程语言：${NC}
   php [版本]        安装 PHP (默认: 7.4)
   python [版本]      安装 Python (默认: 3.11)
   nodejs [版本]      安装 Node.js (默认: 20)
   java [版本]       安装 Java (默认: 11)
+  go [版本]         安装 Go (默认: 1.22)
+  rust              安装 Rust
+  ruby [版本]       安装 Ruby (默认: 3.2)
+  perl [版本]       安装 Perl (默认: 5.36)
 
 ${YELLOW}容器和缓存：${NC}
   docker            安装 Docker
   redis             安装 Redis
+  memcached         安装 Memcached
+  minio             安装 MinIO
+  rabbitmq          安装 RabbitMQ
+  kafka             安装 Kafka
+  zookeeper         安装 Zookeeper
 
 ${YELLOW}运维工具：${NC}
   monitor           安装监控系统
@@ -65,6 +78,11 @@ ${YELLOW}示例：${NC}
   $0 nginx
   $0 php 8.0
   $0 python 3.11
+  $0 go 1.22
+  $0 rust
+  $0 mongodb
+  $0 rabbitmq
+  $0 elasticsearch
   $0 ssl example.com
   $0 lnmp
 
@@ -191,6 +209,45 @@ main() {
             ;;
         java)
             install_software java "$@"
+            ;;
+        go)
+            install_software go "$@"
+            ;;
+        rust)
+            install_software rust
+            ;;
+        ruby)
+            install_software ruby "$@"
+            ;;
+        perl)
+            install_software perl "$@"
+            ;;
+        mongodb)
+            install_software mongodb
+            ;;
+        sqlite)
+            install_software sqlite
+            ;;
+        elasticsearch)
+            install_software elasticsearch
+            ;;
+        clickhouse)
+            install_software clickhouse
+            ;;
+        memcached)
+            install_software memcached
+            ;;
+        minio)
+            install_software minio
+            ;;
+        rabbitmq)
+            install_software rabbitmq
+            ;;
+        kafka)
+            install_software kafka
+            ;;
+        zookeeper)
+            install_software zookeeper
             ;;
         docker)
             install_software docker
