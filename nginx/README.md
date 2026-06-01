@@ -32,6 +32,37 @@ nginx -v
 - 主配置: `/etc/nginx/nginx.conf`
 - 网站配置: `/etc/nginx/conf.d/`
 - 默认站点: `/usr/share/nginx/html/`
+- 配置示例: `configs/` 目录
+
+## 常用配置示例
+
+提供多种常用配置示例，位于 `configs/` 目录：
+
+| 配置文件 | 用途 |
+|---------|------|
+| `static-site.conf` | 静态网站配置 |
+| `reverse-proxy.conf` | 反向代理配置 |
+| `load-balancer.conf` | 负载均衡配置 |
+| `ssl-site.conf` | HTTPS + SSL配置 |
+| `php-fastcgi.conf` | PHP-FPM配置 |
+| `wordpress.conf` | WordPress配置 |
+| `nodejs-proxy.conf` | Node.js反向代理 |
+| `cache.conf` | 静态资源缓存配置 |
+| `rate-limit.conf` | 限流配置 |
+| `security.conf` | 安全加固配置 |
+
+### 使用示例
+
+```bash
+# 复制配置示例到配置目录
+cp configs/ssl-site.conf /etc/nginx/conf.d/
+
+# 修改配置
+vim /etc/nginx/conf.d/ssl-site.conf
+
+# 测试并重载
+nginx -t && systemctl reload nginx
+```
 
 ## 健康检查
 ```bash
