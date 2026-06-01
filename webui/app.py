@@ -9,6 +9,7 @@
 import os
 import subprocess
 import json
+import re
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_socketio import SocketIO, emit
 import threading
@@ -16,9 +17,12 @@ import time
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# 存储安装日志
+install_logs = {}
 
 @app.route('/')
 def index():
@@ -112,7 +116,31 @@ def cpu_info():
 @app.route('/api/memory')
 def memory_info():
     try:
-        result = subprocess.run(['free', '-h'], capture_output=True, text=True)
+        # 使用不带 -h 的 free 命令，以便准确计算百分比
+        result = subprocess.run(['free'], capture_output=True, text=True)
+        lines = result.stdout.split('\n')
+        mem_line = None
+        for line in lines:
+            if line.startswith('Mem:'):
+                mem_line = line
+                break
+        
+        if mem_line:
+            parts = list(filter(None, mem_line.split()))
+            total = int(parts[1])
+            used = int(parts[2])
+            percent = (used / total) * 100
+            
+            # 同时获取带单位的输出用于显示
+            result_h = subprocess.run(['free', '-h'], capture_output=True, text=True)
+            return jsonify({
+                'success': True, 
+                'data': result_h.stdout,
+                'percent': round(percent, 1),
+                'total': total,
+                'used': used
+            })
+        
         return jsonify({'success': True, 'data': result.stdout})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
@@ -150,61 +178,157 @@ def list_software():
         item_path = os.path.join(SCRIPT_DIR, item)
         if os.path.isdir(item_path) and item not in ['lib', 'config', 'uninstall', 'examples', 
                                                       'security-baseline', 'kubernetes', 
-                                                      'docker-compose-templates', 'docker-manager']:
+                                                      'docker-compose-templates', 'docker-manager',
+                                                      'webui', 'healthcheck', 'backup']:
             script_file = os.path.join(item_path, f'{item}.sh')
             if os.path.isfile(script_file):
                 software_list.append(item)
     return jsonify(sorted(software_list))
+
+# 软件检测映射
+software_check_map = {
+    'nginx': {'cmd': 'nginx -v', 'stderr': True},
+    'mysql': {'cmd': 'mysql -V', 'stderr': False},
+    'mariadb': {'cmd': 'mysql -V', 'stderr': False},
+    'redis': {'cmd': 'redis-server --version', 'stderr': False},
+    'php': {'cmd': 'php -v', 'stderr': False},
+    'python': {'cmd': 'python3 -V', 'stderr': True},
+    'node': {'cmd': 'node -v', 'stderr': False},
+    'docker': {'cmd': 'docker --version', 'stderr': False},
+    'java': {'cmd': 'java -version', 'stderr': True},
+    'go': {'cmd': 'go version', 'stderr': False},
+    'git': {'cmd': 'git --version', 'stderr': False},
+    'vim': {'cmd': 'vim --version', 'stderr': False},
+    'curl': {'cmd': 'curl --version', 'stderr': False},
+    'wget': {'cmd': 'wget --version', 'stderr': False},
+    'tmux': {'cmd': 'tmux -V', 'stderr': False},
+    'htop': {'cmd': 'htop --version', 'stderr': False},
+    'iftop': {'cmd': 'iftop -h', 'stderr': True},
+    'nethogs': {'cmd': 'nethogs -V', 'stderr': False},
+    'telnet': {'cmd': 'telnet --help', 'stderr': True},
+    'net-tools': {'cmd': 'ifconfig --version', 'stderr': True},
+    'iptraf': {'cmd': 'iptraf-ng -V', 'stderr': False},
+    'lsof': {'cmd': 'lsof -v', 'stderr': True},
+    'tree': {'cmd': 'tree --version', 'stderr': False},
+    'jq': {'cmd': 'jq --version', 'stderr': False},
+    'vsftpd': {'cmd': 'vsftpd -v', 'stderr': True},
+    'samba': {'cmd': 'smbd --version', 'stderr': False},
+    'nfs': {'cmd': 'rpcinfo -p', 'stderr': False},
+    'kubernetes': {'cmd': 'kubectl version --client', 'stderr': False},
+    'jenkins': {'cmd': 'java -jar /usr/share/jenkins/jenkins.war --version 2>/dev/null || echo "Not found"', 'stderr': False},
+    'gitlab': {'cmd': 'gitlab-ctl version 2>/dev/null || echo "Not found"', 'stderr': False},
+    'harbor': {'cmd': 'docker ps -q -f name=harbor 2>/dev/null || echo "Not found"', 'stderr': False},
+}
+
+@app.route('/api/software/status')
+def software_status():
+    # 先获取所有可用的软件
+    available_software = []
+    for item in os.listdir(SCRIPT_DIR):
+        item_path = os.path.join(SCRIPT_DIR, item)
+        if os.path.isdir(item_path) and item not in ['lib', 'config', 'uninstall', 'examples', 
+                                                      'security-baseline', 'kubernetes', 
+                                                      'docker-compose-templates', 'docker-manager',
+                                                      'webui', 'healthcheck', 'backup']:
+            script_file = os.path.join(item_path, f'{item}.sh')
+            if os.path.isfile(script_file):
+                available_software.append(item)
+    
+    status_list = []
+    for software in available_software:
+        # 尝试用预定义的检测命令
+        check_info = software_check_map.get(software)
+        if check_info:
+            try:
+                result = subprocess.run(check_info['cmd'], shell=True, 
+                                      capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    output = result.stderr.strip() if check_info['stderr'] else result.stdout.strip()
+                    # 提取版本号
+                    version_match = re.search(r'(\d+\.\d+(?:\.\d+)?)', output)
+                    version = version_match.group(1) if version_match else output[:50]
+                    status_list.append({'name': software, 'status': 'installed', 'version': version})
+                else:
+                    status_list.append({'name': software, 'status': 'not_installed', 'version': ''})
+            except:
+                status_list.append({'name': software, 'status': 'not_installed', 'version': ''})
+        else:
+            # 尝试通用检测 - 检查命令是否存在
+            try:
+                result = subprocess.run(['which', software], capture_output=True, text=True)
+                if result.returncode == 0:
+                    # 尝试获取版本
+                    version = ''
+                    for version_cmd in ['--version', '-v', '-V', 'version']:
+                        try:
+                            cmd = [software, version_cmd]
+                            ver_result = subprocess.run(cmd, capture_output=True, text=True, timeout=3)
+                            if ver_result.returncode == 0:
+                                output = ver_result.stdout or ver_result.stderr
+                                version_match = re.search(r'(\d+\.\d+(?:\.\d+)?)', output)
+                                version = version_match.group(1) if version_match else output[:50]
+                                if version:
+                                    break
+                        except:
+                            continue
+                    status_list.append({'name': software, 'status': 'installed', 'version': version})
+                else:
+                    status_list.append({'name': software, 'status': 'not_installed', 'version': ''})
+            except:
+                status_list.append({'name': software, 'status': 'not_installed', 'version': ''})
+    
+    return jsonify(status_list)
 
 @app.route('/api/software/install', methods=['POST'])
 def install_software():
     data = request.json
     software = data.get('software')
     version = data.get('version', '')
+    task_id = f'install_{software}_{int(time.time())}'
     
-    try:
-        cmd = [f'{SCRIPT_DIR}/main.sh', 'install', software]
-        if version:
-            cmd.append(version)
-        
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-        return jsonify({
-            'success': result.returncode == 0,
-            'output': result.stdout,
-            'error': result.stderr
-        })
-    except subprocess.TimeoutExpired:
-        return jsonify({'success': False, 'error': '安装超时'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/api/software/status')
-def software_status():
-    software_list = [
-        {'name': 'nginx', 'cmd': 'nginx -v'},
-        {'name': 'mysql', 'cmd': 'mysql -V'},
-        {'name': 'redis', 'cmd': 'redis-server --version'},
-        {'name': 'php', 'cmd': 'php -v'},
-        {'name': 'python', 'cmd': 'python3 -V'},
-        {'name': 'node', 'cmd': 'node -v'},
-        {'name': 'docker', 'cmd': 'docker --version'},
-        {'name': 'java', 'cmd': 'java -version'},
-        {'name': 'go', 'cmd': 'go version'},
-    ]
-    
-    status_list = []
-    for item in software_list:
+    def run_install():
         try:
-            result = subprocess.run(item['cmd'].split(), capture_output=True, text=True)
-            if result.returncode == 0:
-                version = result.stderr.strip() if item['name'] == 'java' else result.stdout.strip()
-                status_list.append({'name': item['name'], 'status': 'installed', 'version': version})
-            else:
-                status_list.append({'name': item['name'], 'status': 'not_installed', 'version': ''})
-        except:
-            status_list.append({'name': item['name'], 'status': 'not_installed', 'version': ''})
+            cmd = [f'{SCRIPT_DIR}/main.sh', 'install', software]
+            if version:
+                cmd.append(version)
+            
+            install_logs[task_id] = []
+            
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+                                     text=True, bufsize=1, universal_newlines=True)
+            
+            for line in iter(process.stdout.readline, ''):
+                if line:
+                    install_logs[task_id].append(line.rstrip())
+                    socketio.emit('install_log', {'task_id': task_id, 'line': line.rstrip()})
+            
+            process.wait()
+            
+            success = process.returncode == 0
+            socketio.emit('install_complete', {
+                'task_id': task_id, 
+                'success': success,
+                'logs': install_logs[task_id]
+            })
+            
+            return success
+            
+        except Exception as e:
+            error_msg = str(e)
+            install_logs[task_id].append(f'Error: {error_msg}')
+            socketio.emit('install_complete', {
+                'task_id': task_id, 
+                'success': False, 
+                'error': error_msg,
+                'logs': install_logs[task_id]
+            })
+            return False
     
-    return jsonify(status_list)
+    # 在后台线程中运行安装
+    thread = threading.Thread(target=run_install)
+    thread.start()
+    
+    return jsonify({'success': True, 'task_id': task_id})
 
 @app.route('/api/backup', methods=['POST'])
 def backup():
@@ -267,5 +391,13 @@ def get_logs(service):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@socketio.on('connect')
+def handle_connect():
+    print('Client connected')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected')
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)

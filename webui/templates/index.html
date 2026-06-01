@@ -366,8 +366,51 @@
         </div>
     </div>
     
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
         let currentPage = 'dashboard';
+        let socket = null;
+        let currentInstallTask = null;
+        
+        // 初始化Socket.IO连接
+        function initSocket() {
+            if (typeof io !== 'undefined') {
+                socket = io();
+                
+                socket.on('connect', function() {
+                    console.log('Socket connected');
+                });
+                
+                socket.on('install_log', function(data) {
+                    if (currentInstallTask === data.task_id) {
+                        const output = document.getElementById('install-log-output');
+                        if (output) {
+                            output.textContent += data.line + '\n';
+                            output.scrollTop = output.scrollHeight;
+                        }
+                    }
+                });
+                
+                socket.on('install_complete', function(data) {
+                    if (currentInstallTask === data.task_id) {
+                        const output = document.getElementById('install-log-output');
+                        if (data.success) {
+                            output.textContent += '\n✅ 安装完成！\n';
+                            setTimeout(function() {
+                                loadInstalledSoftware();
+                                closeModal();
+                            }, 2000);
+                        } else {
+                            output.textContent += '\n❌ 安装失败: ' + (data.error || '未知错误') + '\n';
+                        }
+                    }
+                });
+            }
+        }
+        
+        // 页面加载后初始化Socket
+        document.addEventListener('DOMContentLoaded', initSocket);
         
         function showPage(page) {
             document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
@@ -389,15 +432,20 @@
             });
             
             fetch('/api/memory').then(r => r.json()).then(data => {
-                const lines = data.data.split('\n');
-                for (const line of lines) {
-                    if (line.startsWith('Mem:')) {
-                        const parts = line.split(/\s+/);
-                        const used = parseFloat(parts[2]);
-                        const total = parseFloat(parts[1]);
-                        const percent = ((used / total) * 100).toFixed(1);
-                        document.getElementById('mem-usage').textContent = percent + '%';
-                        break;
+                if (data.percent !== undefined) {
+                    document.getElementById('mem-usage').textContent = data.percent + '%';
+                } else {
+                    // 兼容旧逻辑
+                    const lines = data.data.split('\n');
+                    for (const line of lines) {
+                        if (line.startsWith('Mem:')) {
+                            const parts = line.split(/\s+/);
+                            const used = parseFloat(parts[2]);
+                            const total = parseFloat(parts[1]);
+                            const percent = ((used / total) * 100).toFixed(1);
+                            document.getElementById('mem-usage').textContent = percent + '%';
+                            break;
+                        }
                     }
                 }
             });
@@ -552,15 +600,22 @@
                 return;
             }
             
+            // 显示安装日志模态框
+            const logOutput = '<pre class="output-box" id="install-log-output" style="max-height: 400px;">正在安装 ' + software + '...\n</pre>';
+            showModal('📦 安装 ' + software, logOutput);
+            
             fetch('/api/software/install', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ software, version })
             }).then(r => r.json()).then(data => {
-                const output = document.createElement('pre');
-                output.textContent = data.output + '\n' + data.error;
-                showModal(data.success ? '安装成功' : '安装失败', output.outerHTML);
-                if (data.success) loadInstalledSoftware();
+                if (data.success && data.task_id) {
+                    currentInstallTask = data.task_id;
+                } else {
+                    document.getElementById('install-log-output').textContent += '❌ 启动安装失败: ' + (data.error || '未知错误') + '\n';
+                }
+            }).catch(err => {
+                document.getElementById('install-log-output').textContent += '❌ 请求失败: ' + err.message + '\n';
             });
         }
         
