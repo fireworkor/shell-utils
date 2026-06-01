@@ -2,6 +2,88 @@
 
 一个包含常用 Shell 脚本工具函数的项目，提供了日志、文件操作、系统信息、网络检查、CentOS 8 软件部署等功能。
 
+## 🚀 一键远程安装（推荐）
+
+您可以通过 `curl` 远程直接运行脚本，无需下载！
+
+### 基本语法
+
+```bash
+# 查看帮助
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | bash
+
+# 安装软件（需要 root 权限）
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | sudo bash -s -- <命令>
+
+# 普通命令（不需要 root）
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | bash -s -- <命令>
+```
+
+### 快速使用示例
+
+```bash
+# 1. 查看系统信息
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | bash -s -- system_info
+
+# 2. 一键安装 LNMP 网站环境
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | sudo bash -s -- lnmp
+
+# 3. 安装 Docker
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | sudo bash -s -- docker
+
+# 4. 安装 Nginx
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | sudo bash -s -- nginx
+
+# 5. 安装 PHP 8.0
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | sudo bash -s -- php 8.0
+
+# 6. 安装 Python 3.11
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | sudo bash -s -- python 3.11
+
+# 7. 检查磁盘使用
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | bash -s -- check_disk
+
+# 8. 检查网络连接
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | bash -s -- check_network
+```
+
+## 📋 所有可用命令
+
+### 基础工具命令（不需要 root）
+
+| 命令 | 说明 |
+|------|------|
+| `system_info` | 显示系统信息（主机名、系统版本、内核、内存、磁盘等） |
+| `check_disk` | 检查磁盘使用情况 |
+| `check_network` | 检查网络连接 |
+| `backup <文件>` | 备份指定文件 |
+
+### CentOS 8 软件部署命令（需要 root）
+
+| 命令 | 说明 | 示例 |
+|------|------|------|
+| `nginx` | 安装 Nginx | `nginx` |
+| `apache` | 安装 Apache | `apache` |
+| `mysql` | 安装 MySQL 8.0 | `mysql` |
+| `postgresql` | 安装 PostgreSQL 15 | `postgresql` |
+| `php [版本]` | 安装 PHP | `php 8.0` |
+| `python [版本]` | 安装 Python | `python 3.11` |
+| `nodejs [版本]` | 安装 Node.js | `nodejs 20` |
+| `java [版本]` | 安装 OpenJDK | `java 17` |
+| `docker` | 安装 Docker | `docker` |
+| `redis` | 安装 Redis | `redis` |
+
+### 一键部署方案（需要 root）
+
+| 命令 | 说明 |
+|------|------|
+| `lnmp` | 一键安装 LNMP 栈（Nginx + MySQL + PHP） |
+| `lamp` | 一键安装 LAMP 栈（Apache + MySQL + PHP） |
+| `dev_tools` | 安装开发工具（gcc, git, make 等） |
+| `common_tools` | 安装常用工具（htop, nmap, tcpdump 等） |
+| `firewall` | 配置防火墙（开放常用端口） |
+| `all` | 安装所有基础服务 |
+
 ## 功能介绍
 
 ### 1. 日志函数
@@ -48,149 +130,63 @@
 
 ## 使用方法
 
-### 引入脚本
-```bash
-source utils.sh
-# 或
-. utils.sh
-```
+### 本地使用
 
-### 运行示例
 ```bash
+# 克隆仓库
+git clone https://github.com/fireworkor/shell-utils.git
+cd shell-utils
+
+# 一键安装脚本（支持传参）
+./install.sh <命令>
+
+# 或者引入工具函数
+source utils.sh
 ./example.sh
 ```
 
-## 文件说明
-- `utils.sh` - 工具函数集合
-- `example.sh` - 使用示例
-- `deploy-centos8.sh` - CentOS 8 软件部署工具集
-- `deploy-to-github.sh` - 一键部署到 GitHub 脚本
-- `README.md` - 项目说明文档
+### 高级部署脚本
 
-## CentOS 8 软件部署
-
-### 功能概览
-
-提供针对 CentOS 8 的软件一键部署功能，包括：
-
-#### Web 服务器
-- **Nginx** - 高性能 Web 服务器和反向代理服务器
-- **Apache** - 流行的 Apache HTTP Server
-
-#### 数据库
-- **MySQL 8.0** - 流行的关系型数据库
-- **PostgreSQL 15** - 高级开源关系型数据库
-- **Redis** - 内存数据结构存储
-- **Memcached** - 高性能分布式内存缓存
-
-#### 编程语言环境
-- **PHP** - 支持多个版本（7.4, 8.0, 8.1 等）
-- **Python** - 支持多个版本（3.8, 3.9, 3.10, 3.11 等）
-- **Node.js** - JavaScript 运行时环境
-- **Java** - OpenJDK 多个版本支持
-- **Maven** - Java 项目管理工具
-
-#### 容器和 DevOps
-- **Docker** - 容器化平台（包含 Docker Compose）
-- **GitLab** - 完整的 Git 仓库管理
-- **Prometheus** - 监控系统
-
-#### 一键部署方案
-- **LNMP 栈** - Nginx + MySQL + PHP
-- **LAMP 栈** - Apache + MySQL + PHP
-
-### 使用方法
+对于更复杂的部署需求，可以使用 `deploy-centos8.sh`：
 
 ```bash
-# 必须使用 root 权限
-sudo ./deploy-centos8.sh <命令>
-
 # 查看帮助
 sudo ./deploy-centos8.sh help
 
 # 单个软件安装
 sudo ./deploy-centos8.sh install_nginx
 sudo ./deploy-centos8.sh install_docker
-sudo ./deploy-centos8.sh install_mysql
 
-# 一键安装完整栈
-sudo ./deploy-centos8.sh install_lnmp
-sudo ./deploy-centos8.sh install_lamp
-
-# 指定软件版本
+# 指定版本
 sudo ./deploy-centos8.sh install_php 8.0
 sudo ./deploy-centos8.sh install_nodejs 18
-sudo ./deploy-centos8.sh install_python 3.11
 ```
 
-### 常用命令示例
+## 文件说明
 
-```bash
-# 1. 更新系统并安装开发工具
-sudo ./deploy-centos8.sh update_system
-sudo ./deploy-centos8.sh install_dev_tools
-
-# 2. 安装 LNMP 网站环境
-sudo ./deploy-centos8.sh install_lnmp
-
-# 3. 安装 Docker 容器环境
-sudo ./deploy-centos8.sh install_docker
-
-# 4. 安装 Python 开发环境
-sudo ./deploy-centos8.sh install_python 3.11
-
-# 5. 配置防火墙
-sudo ./deploy-centos8.sh configure_firewall
-
-# 6. 安装常用工具
-sudo ./deploy-centos8.sh install_common_tools
-```
-
-### 主要函数列表
-
-| 函数名 | 功能 | 说明 |
-|--------|------|------|
-| `update_system` | 系统更新 | 更新 CentOS 8 所有软件包 |
-| `install_dev_tools` | 开发工具 | 安装 gcc, git, make 等开发工具 |
-| `install_nginx` | Nginx | 安装最新稳定版 Nginx |
-| `install_apache` | Apache | 安装 Apache HTTP Server |
-| `install_mysql` | MySQL | 安装 MySQL 8.0 |
-| `install_postgresql` | PostgreSQL | 安装 PostgreSQL 15 |
-| `install_php` | PHP | 安装 PHP 及常用扩展 |
-| `install_python` | Python | 从源码编译安装 Python |
-| `install_nodejs` | Node.js | 安装 Node.js 运行时 |
-| `install_docker` | Docker | 安装 Docker 及 Docker Compose |
-| `install_lnmp` | LNMP 栈 | 一键安装 Nginx+MySQL+PHP |
-| `install_lamp` | LAMP 栈 | 一键安装 Apache+MySQL+PHP |
-| `configure_firewall` | 防火墙 | 配置 firewalld 开放常用端口 |
+- `install.sh` - ⭐ 一键远程安装脚本（推荐）
+- `utils.sh` - 工具函数集合
+- `example.sh` - 工具函数使用示例
+- `deploy-centos8.sh` - CentOS 8 完整部署脚本
+- `deploy-to-github.sh` - 一键部署到 GitHub 脚本
+- `README.md` - 项目说明文档
 
 ## 部署到 GitHub
 
-### 一键部署（推荐）
-
-使用提供的部署脚本可以快速将项目推送到 GitHub：
+如需将此项目部署到您自己的 GitHub 仓库：
 
 ```bash
 ./deploy-to-github.sh
 ```
 
-脚本会自动：
-- 检查并安装 GitHub CLI（如需要）
-- 引导您完成 GitHub 登录
-- 创建仓库并推送代码
-
-### 手动部署
-
-如果您想手动部署，执行以下步骤：
-
-1. 在 GitHub 上创建新仓库（不初始化 README、.gitignore 或 LICENSE）
-2. 在本地仓库目录执行：
+或使用自动化脚本：
 
 ```bash
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-git branch -M main
-git push -u origin main
+export GH_TOKEN="your_github_token"
+export GH_USERNAME="your_username"
+./deploy-automated.sh
 ```
 
 ## 许可证
+
 MIT
