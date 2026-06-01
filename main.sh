@@ -85,6 +85,11 @@ ${YELLOW}运维工具：${NC}
   mirror [源]       设置镜像源
   firewall          防火墙管理
 
+${YELLOW}大数据组件：${NC}
+  hadoop [mode]     部署 Hadoop (pseudo/stop/status)
+  spark [mode]      部署 Spark (local/standalone/stop/status/shell)
+  flink [mode]      部署 Flink (local/cluster/stop/status/sql)
+
 ${YELLOW}一键部署：${NC}
   lnmp              LNMP 栈
   lamp              LAMP 栈
@@ -456,6 +461,15 @@ main() {
             ;;
         firewall)
             install_software firewall "$@"
+            ;;
+        hadoop)
+            install_software hadoop "$@"
+            ;;
+        spark)
+            install_software spark "$@"
+            ;;
+        flink)
+            install_software flink "$@"
             ;;
         lnmp)
             install_lnmp
