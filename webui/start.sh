@@ -19,7 +19,7 @@ detect_os
 # 检查并安装 Python3
 if ! command -v python3 &> /dev/null; then
     echo -e "${YELLOW}📦 安装 Python3...${NC}"
-    local pkg_manager=$(get_pkg_manager)
+    pkg_manager=$(get_pkg_manager)
     case $pkg_manager in
         dnf|yum)
             $pkg_manager install -y python3 python3-pip
@@ -37,6 +37,30 @@ if ! command -v python3 &> /dev/null; then
     print_success "Python3 安装完成"
 fi
 
+# 确保pip模块可用
+if ! python3 -m pip --version &> /dev/null; then
+    echo -e "${YELLOW}📦 安装 pip 模块...${NC}"
+    pkg_manager=$(get_pkg_manager)
+    case $pkg_manager in
+        dnf|yum)
+            $pkg_manager install -y python3-pip
+            ;;
+        apt)
+            export DEBIAN_FRONTEND=noninteractive
+            apt update
+            apt install -y python3-pip
+            ;;
+    esac
+    # 如果系统包管理器不行，尝试通过get-pip.py安装
+    if ! python3 -m pip --version &> /dev/null; then
+        echo -e "${YELLOW}尝试通过 get-pip.py 安装...${NC}"
+        curl -sSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
+        python3 /tmp/get-pip.py
+        rm -f /tmp/get-pip.py
+    fi
+    print_success "pip 模块安装完成"
+fi
+
 # 检查并安装 Flask
 if ! python3 -c "import flask" &> /dev/null; then
     echo -e "${YELLOW}📦 安装 Flask 依赖...${NC}"
@@ -49,7 +73,7 @@ mkdir -p "$SCRIPT_DIR/logs"
 
 # 停止已存在的服务
 if [ -f "$SCRIPT_DIR/pid.txt" ]; then
-    local old_pid=$(cat "$SCRIPT_DIR/pid.txt")
+    old_pid=$(cat "$SCRIPT_DIR/pid.txt")
     if kill -0 $old_pid 2>/dev/null; then
         echo -e "${YELLOW}停止已存在的服务...${NC}"
         kill $old_pid 2>/dev/null
