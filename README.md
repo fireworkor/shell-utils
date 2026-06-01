@@ -28,7 +28,7 @@ sudo ./php/php.sh 8.0
 sudo ./python/python.sh 3.11
 ```
 
-## ✨ 新功能 (v2.1)
+## ✨ 新功能 (v2.2)
 
 - 🔧 **配置文件管理** - 统一的版本配置
 - 📊 **安装状态检查** - 一键查看已安装软件
@@ -43,12 +43,16 @@ sudo ./python/python.sh 3.11
 - 📦 **多版本管理** - 查看、安装、切换不同版本软件
 - ⚡ **快捷运维** - 常用运维命令的快捷方式
 - 🔄 **脚本升级** - 从 GitHub 自动更新脚本
+- 🖥️ **Web UI** - 可视化运维管理平台
+- 🎮 **交互式菜单** - 数字选择的便捷安装方式
+- 🌍 **远程部署** - 支持 SSH 远程服务器部署
 
 ## 📁 目录结构
 
 ```
 shell-utils/
-├── main.sh                 # ⭐ 总控脚本 v2.1
+├── main.sh                 # ⭐ 总控脚本 v2.2
+├── menu.sh                 # 🎮 交互式菜单
 ├── update.sh               # 脚本升级工具
 ├── daily-check.sh          # 日常巡检脚本
 ├── ops.sh                  # 快捷运维命令集
@@ -59,7 +63,8 @@ shell-utils/
 │   ├── logging.sh         # 日志系统
 │   ├── config.sh          # 配置管理
 │   ├── error-handler.sh   # 错误处理
-│   └── logging-v2.sh      # 日志系统 v2
+│   ├── logging-v2.sh      # 日志系统 v2
+│   └── remote.sh          # 远程部署支持
 ├── config/
 │   └── versions.conf      # 软件版本配置
 ├── uninstall/
@@ -245,10 +250,53 @@ sudo ./main.sh ops mem         # 查看内存使用
 sudo ./main.sh ops logs nginx  # 查看 Nginx 日志
 sudo ./main.sh ops monitor     # 实时监控
 
-# 脚本升级
+### 脚本升级
+
+```bash
 sudo ./main.sh update check    # 检查更新
 sudo ./main.sh update          # 执行更新
 sudo ./main.sh update force    # 强制更新
+```
+
+### 🎮 交互式菜单
+
+```bash
+# 启动交互式菜单（本机部署）
+sudo ./main.sh menu
+
+# 远程部署
+sudo ./main.sh menu 192.168.1.100 root password 22
+```
+
+交互式菜单支持数字选择，方便快捷安装：
+
+```
+🛠️ 运维工具管理平台
+
+请选择操作：
+
+  1. 软件安装
+  2. 集群部署
+  3. 运维工具
+  4. 安全扫描
+  5. 日常巡检
+  6. 备份恢复
+  7. 远程部署
+  8. 脚本升级
+  9. Web UI
+  0. 退出
+
+请输入选项 [0-9]: 
+```
+
+### 🖥️ Web UI
+
+```bash
+# 启动 Web UI
+sudo ./main.sh webui
+
+# 访问地址
+# http://localhost:5000
 ```
 
 ## 🌐 支持的操作系统

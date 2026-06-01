@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运维工具管理平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; }
+        
+        /* 顶部导航 */
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 20px; font-weight: 600; }
+        .header .status { font-size: 14px; opacity: 0.9; }
+        
+        /* 主体布局 */
+        .main { display: flex; height: calc(100vh - 60px); }
+        
+        /* 左侧菜单 */
+        .sidebar { width: 220px; background: #2c3e50; color: white; padding: 16px 0; overflow-y: auto; }
+        .sidebar .menu-item { padding: 12px 24px; cursor: pointer; transition: background 0.2s; }
+        .sidebar .menu-item:hover { background: #34495e; }
+        .sidebar .menu-item.active { background: #3498db; }
+        .sidebar .menu-item i { margin-right: 8px; }
+        
+        /* 右侧内容 */
+        .content { flex: 1; padding: 24px; overflow-y: auto; }
+        
+        /* 卡片样式 */
+        .card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 24px; margin-bottom: 24px; }
+        .card-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #2c3e50; }
+        
+        /* 状态卡片 */
+        .status-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .status-card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .status-card .value { font-size: 32px; font-weight: 700; color: #2c3e50; }
+        .status-card .label { font-size: 14px; color: #7f8c8d; margin-top: 8px; }
+        .status-card.success { border-left: 4px solid #27ae60; }
+        .status-card.warning { border-left: 4px solid #f39c12; }
+        .status-card.danger { border-left: 4px solid #e74c3c; }
+        .status-card.info { border-left: 4px solid #3498db; }
+        
+        /* 按钮样式 */
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; transition: opacity 0.2s; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-warning { background: #f39c12; color: white; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn:hover { opacity: 0.9; }
+        
+        /* 表格样式 */
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #ecf0f1; }
+        .table th { background: #f8f9fa; font-weight: 600; color: #2c3e50; }
+        .table tr:hover { background: #f8f9fa; }
+        
+        /* 服务状态 */
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .status-active { background: #d4edda; color: #155724; }
+        .status-inactive { background: #f8d7da; color: #721c24; }
+        .status-unknown { background: #e2e3e5; color: #383d41; }
+        
+        /* 输出区域 */
+        .output-box { background: #1e272e; color: #ecf0f1; padding: 16px; border-radius: 4px; font-family: 'Monaco', 'Menlo', monospace; font-size: 13px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+        
+        /* 软件列表 */
+        .software-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+        .software-card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; }
+        .software-card .name { font-size: 16px; font-weight: 600; color: #2c3e50; margin-bottom: 8px; }
+        .software-card .version { font-size: 14px; color: #7f8c8d; margin-bottom: 12px; }
+        .software-card .status { margin-bottom: 12px; }
+        
+        /* 模态框 */
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; border-radius: 8px; padding: 24px; width: 90%; max-width: 500px; }
+        .modal-header { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+        .modal-body { margin-bottom: 20px; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; }
+        
+        /* 进度条 */
+        .progress { height: 8px; background: #ecf0f1; border-radius: 4px; overflow: hidden; }
+        .progress-bar { height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transition: width 0.3s; }
+        
+        /* 加载状态 */
+        .loading { text-align: center; padding: 40px; color: #7f8c8d; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .status-cards { grid-template-columns: repeat(2, 1fr); }
+            .sidebar { width: 100%; height: auto; }
+            .main { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛠️ 运维工具管理平台</h1>
+        <div class="status" id="system-time"></div>
+    </div>
+    
+    <div class="main">
+        <div class="sidebar">
+            <div class="menu-item active" onclick="showPage('dashboard')">
+                <i>📊</i> 仪表盘
+            </div>
+            <div class="menu-item" onclick="showPage('system')">
+                <i>🖥️</i> 系统信息
+            </div>
+            <div class="menu-item" onclick="showPage('services')">
+                <i>⚙️</i> 服务管理
+            </div>
+            <div class="menu-item" onclick="showPage('software')">
+                <i>📦</i> 软件管理
+            </div>
+            <div class="menu-item" onclick="showPage('healthcheck')">
+                <i>✅</i> 健康检查
+            </div>
+            <div class="menu-item" onclick="showPage('security')">
+                <i>🔒</i> 安全扫描
+            </div>
+            <div class="menu-item" onclick="showPage('daily')">
+                <i>📋</i> 日常巡检
+            </div>
+            <div class="menu-item" onclick="showPage('backup')">
+                <i>💾</i> 备份恢复
+            </div>
+            <div class="menu-item" onclick="showPage('update')">
+                <i>🔄</i> 脚本升级
+            </div>
+            <div class="menu-item" onclick="showPage('logs')">
+                <i>📝</i> 日志查看
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- 仪表盘 -->
+            <div id="page-dashboard" class="page">
+                <div class="status-cards">
+                    <div class="status-card success">
+                        <div class="value" id="cpu-usage">--</div>
+                        <div class="label">CPU 使用率</div>
+                    </div>
+                    <div class="status-card warning">
+                        <div class="value" id="mem-usage">--</div>
+                        <div class="label">内存使用率</div>
+                    </div>
+                    <div class="status-card info">
+                        <div class="value" id="disk-usage">--</div>
+                        <div class="label">磁盘使用率</div>
+                    </div>
+                    <div class="status-card danger">
+                        <div class="value" id="active-services">--</div>
+                        <div class="label">活跃服务数</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">📊 服务状态概览</div>
+                    <table class="table">
+                        <thead>
+                            <tr><th>服务名称</th><th>状态</th><th>操作</th></tr>
+                        </thead>
+                        <tbody id="services-table-body"></tbody>
+                    </table>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">📦 已安装软件</div>
+                    <div class="software-grid" id="software-grid"></div>
+                </div>
+            </div>
+            
+            <!-- 系统信息 -->
+            <div id="page-system" class="page" style="display:none">
+                <div class="card">
+                    <div class="card-title">🖥️ 系统信息</div>
+                    <pre class="output-box" id="system-info-output"></pre>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">📊 CPU 信息</div>
+                    <pre class="output-box" id="cpu-info-output"></pre>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">💾 内存信息</div>
+                    <pre class="output-box" id="mem-info-output"></pre>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">💿 磁盘信息</div>
+                    <pre class="output-box" id="disk-info-output"></pre>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">🌐 网络信息</div>
+                    <pre class="output-box" id="network-info-output"></pre>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">🔄 进程信息</div>
+                    <pre class="output-box" id="processes-output"></pre>
+                </div>
+            </div>
+            
+            <!-- 服务管理 -->
+            <div id="page-services" class="page" style="display:none">
+                <div class="card">
+                    <div class="card-title">⚙️ 服务管理</div>
+                    <table class="table">
+                        <thead>
+                            <tr><th>服务名称</th><th>状态</th><th>操作</th></tr>
+                        </thead>
+                        <tbody id="services-body">
+                            <tr>
+                                <td>Nginx</td>
+                                <td><span class="status-badge" id="nginx-status">--</span></td>
+                                <td>
+                                    <button class="btn btn-success" onclick="controlService('start', 'nginx')">启动</button>
+                                    <button class="btn btn-warning" onclick="controlService('stop', 'nginx')">停止</button>
+                                    <button class="btn btn-primary" onclick="controlService('restart', 'nginx')">重启</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>MySQL</td>
+                                <td><span class="status-badge" id="mysql-status">--</span></td>
+                                <td>
+                                    <button class="btn btn-success" onclick="controlService('start', 'mysql')">启动</button>
+                                    <button class="btn btn-warning" onclick="controlService('stop', 'mysql')">停止</button>
+                                    <button class="btn btn-primary" onclick="controlService('restart', 'mysql')">重启</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Redis</td>
+                                <td><span class="status-badge" id="redis-status">--</span></td>
+                                <td>
+                                    <button class="btn btn-success" onclick="controlService('start', 'redis')">启动</button>
+                                    <button class="btn btn-warning" onclick="controlService('stop', 'redis')">停止</button>
+                                    <button class="btn btn-primary" onclick="controlService('restart', 'redis')">重启</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Docker</td>
+                                <td><span class="status-badge" id="docker-status">--</span></td>
+                                <td>
+                                    <button class="btn btn-success" onclick="controlService('start', 'docker')">启动</button>
+                                    <button class="btn btn-warning" onclick="controlService('stop', 'docker')">停止</button>
+                                    <button class="btn btn-primary" onclick="controlService('restart', 'docker')">重启</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>SSH</td>
+                                <td><span class="status-badge" id="sshd-status">--</span></td>
+                                <td>
+                                    <button class="btn btn-success" onclick="controlService('start', 'sshd')">启动</button>
+                                    <button class="btn btn-warning" onclick="controlService('stop', 'sshd')">停止</button>
+                                    <button class="btn btn-primary" onclick="controlService('restart', 'sshd')">重启</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 软件管理 -->
+            <div id="page-software" class="page" style="display:none">
+                <div class="card">
+                    <div class="card-title">📦 软件安装</div>
+                    <div>
+                        <select id="software-select" style="padding: 10px; width: 200px; margin-right: 12px;">
+                            <option value="">选择软件</option>
+                        </select>
+                        <input type="text" id="version-input" placeholder="版本号（可选）" style="padding: 10px; width: 150px; margin-right: 12px;">
+                        <button class="btn btn-primary" onclick="installSoftware()">安装</button>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">📋 已安装软件</div>
+                    <div class="software-grid" id="installed-software-grid"></div>
+                </div>
+            </div>
+            
+            <!-- 健康检查 -->
+            <div id="page-healthcheck" class="page" style="display:none">
+                <div class="card">
+                    <div class="card-title">✅ 健康检查</div>
+                    <button class="btn btn-primary" onclick="runHealthcheck()">开始检查</button>
+                    <pre class="output-box" id="healthcheck-output" style="margin-top: 16px;">点击按钮开始健康检查...</pre>
+                </div>
+            </div>
+            
+            <!-- 安全扫描 -->
+            <div id="page-security" class="page" style="display:none">
+                <div class="card">
+                    <div class="card-title">🔒 安全基线扫描</div>
+                    <button class="btn btn-danger" onclick="runSecurityScan()">开始扫描</button>
+                    <pre class="output-box" id="security-output" style="margin-top: 16px;">点击按钮开始安全扫描...</pre>
+                </div>
+            </div>
+            
+            <!-- 日常巡检 -->
+            <div id="page-daily" class="page" style="display:none">
+                <div class="card">
+                    <div class="card-title">📋 日常巡检</div>
+                    <button class="btn btn-primary" onclick="runDailyCheck()">开始巡检</button>
+                    <pre class="output-box" id="daily-output" style="margin-top: 16px;">点击按钮开始日常巡检...</pre>
+                </div>
+            </div>
+            
+            <!-- 备份恢复 -->
+            <div id="page-backup" class="page" style="display:none">
+                <div class="card">
+                    <div class="card-title">💾 备份管理</div>
+                    <div>
+                        <select id="backup-target" style="padding: 10px; width: 200px; margin-right: 12px;">
+                            <option value="all">全部备份</option>
+                            <option value="mysql">MySQL</option>
+                            <option value="mongodb">MongoDB</option>
+                            <option value="redis">Redis</option>
+                            <option value="files">文件</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="runBackup()">执行备份</button>
+                    </div>
+                    <pre class="output-box" id="backup-output" style="margin-top: 16px;">选择备份目标并点击按钮...</pre>
+                </div>
+            </div>
+            
+            <!-- 脚本升级 -->
+            <div id="page-update" class="page" style="display:none">
+                <div class="card">
+                    <div class="card-title">🔄 脚本升级</div>
+                    <button class="btn btn-primary" onclick="checkUpdate()">检查更新</button>
+                    <button class="btn btn-success" onclick="runUpdate()" style="margin-left: 12px;">执行升级</button>
+                    <pre class="output-box" id="update-output" style="margin-top: 16px;">点击按钮检查更新...</pre>
+                </div>
+            </div>
+            
+            <!-- 日志查看 -->
+            <div id="page-logs" class="page" style="display:none">
+                <div class="card">
+                    <div class="card-title">📝 日志查看</div>
+                    <select id="log-select" style="padding: 10px; width: 200px; margin-right: 12px;">
+                        <option value="nginx">Nginx 日志</option>
+                        <option value="mysql">MySQL 日志</option>
+                        <option value="system">系统日志</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="getLogs()">查看日志</button>
+                    <pre class="output-box" id="logs-output" style="margin-top: 16px;">选择日志类型并点击按钮...</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 模态框 -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="modal-title"></div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal()">确定</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentPage = 'dashboard';
+        
+        function showPage(page) {
+            document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(page => page.style.display = 'none');
+            event.target.classList.add('active');
+            document.getElementById(`page-${page}`).style.display = 'block';
+            currentPage = page;
+            
+            if (page === 'dashboard') loadDashboard();
+            if (page === 'system') loadSystemInfo();
+            if (page === 'services') loadServices();
+            if (page === 'software') loadSoftwareList();
+        }
+        
+        function loadDashboard() {
+            fetch('/api/cpu').then(r => r.json()).then(data => {
+                const match = data.data.match(/(\d+\.\d+)%?\s*us/);
+                document.getElementById('cpu-usage').textContent = match ? match[1] + '%' : '--';
+            });
+            
+            fetch('/api/memory').then(r => r.json()).then(data => {
+                const lines = data.data.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('Mem:')) {
+                        const parts = line.split(/\s+/);
+                        const used = parseFloat(parts[2]);
+                        const total = parseFloat(parts[1]);
+                        const percent = ((used / total) * 100).toFixed(1);
+                        document.getElementById('mem-usage').textContent = percent + '%';
+                        break;
+                    }
+                }
+            });
+            
+            fetch('/api/disk').then(r => r.json()).then(data => {
+                const lines = data.data.split('\n');
+                for (const line of lines) {
+                    if (line.includes('/dev/') && !line.includes('/boot')) {
+                        const parts = line.split(/\s+/);
+                        document.getElementById('disk-usage').textContent = parts[4];
+                        break;
+                    }
+                }
+            });
+            
+            loadServices();
+            loadSoftwareGrid();
+        }
+        
+        function loadSystemInfo() {
+            fetch('/api/system-info').then(r => r.json()).then(data => {
+                document.getElementById('system-info-output').textContent = data.data;
+            });
+            
+            fetch('/api/cpu').then(r => r.json()).then(data => {
+                document.getElementById('cpu-info-output').textContent = data.data;
+            });
+            
+            fetch('/api/memory').then(r => r.json()).then(data => {
+                document.getElementById('mem-info-output').textContent = data.data;
+            });
+            
+            fetch('/api/disk').then(r => r.json()).then(data => {
+                document.getElementById('disk-info-output').textContent = data.data;
+            });
+            
+            fetch('/api/network').then(r => r.json()).then(data => {
+                document.getElementById('network-info-output').textContent = data.data;
+            });
+            
+            fetch('/api/processes').then(r => r.json()).then(data => {
+                document.getElementById('processes-output').textContent = data.data;
+            });
+        }
+        
+        function loadServices() {
+            fetch('/api/services').then(r => r.json()).then(data => {
+                const tableBody = document.getElementById('services-table-body');
+                tableBody.innerHTML = '';
+                
+                let activeCount = 0;
+                data.forEach(service => {
+                    const statusClass = service.status === 'active' ? 'status-active' : service.status === 'inactive' ? 'status-inactive' : 'status-unknown';
+                    if (service.status === 'active') activeCount++;
+                    
+                    tableBody.innerHTML += `
+                        <tr>
+                            <td>${service.name}</td>
+                            <td><span class="status-badge ${statusClass}">${service.status}</span></td>
+                            <td>-</td>
+                        </tr>
+                    `;
+                });
+                
+                document.getElementById('active-services').textContent = activeCount + '/5';
+                
+                data.forEach(service => {
+                    const badge = document.getElementById(`${service.name}-status`);
+                    if (badge) {
+                        badge.className = `status-badge ${service.status === 'active' ? 'status-active' : service.status === 'inactive' ? 'status-inactive' : 'status-unknown'}`;
+                        badge.textContent = service.status;
+                    }
+                });
+            });
+        }
+        
+        function loadSoftwareList() {
+            fetch('/api/software/list').then(r => r.json()).then(data => {
+                const select = document.getElementById('software-select');
+                select.innerHTML = '<option value="">选择软件</option>';
+                data.forEach(software => {
+                    select.innerHTML += `<option value="${software}">${software}</option>`;
+                });
+            });
+            
+            loadInstalledSoftware();
+        }
+        
+        function loadInstalledSoftware() {
+            fetch('/api/software/status').then(r => r.json()).then(data => {
+                const grid = document.getElementById('installed-software-grid');
+                grid.innerHTML = '';
+                
+                data.forEach(item => {
+                    grid.innerHTML += `
+                        <div class="software-card">
+                            <div class="name">${item.name}</div>
+                            <div class="version">${item.version}</div>
+                            <div class="status">
+                                <span class="status-badge ${item.status === 'installed' ? 'status-active' : 'status-inactive'}">
+                                    ${item.status === 'installed' ? '已安装' : '未安装'}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+        
+        function loadSoftwareGrid() {
+            fetch('/api/software/status').then(r => r.json()).then(data => {
+                const grid = document.getElementById('software-grid');
+                grid.innerHTML = '';
+                
+                data.slice(0, 8).forEach(item => {
+                    grid.innerHTML += `
+                        <div class="software-card">
+                            <div class="name">${item.name}</div>
+                            <div class="version">${item.version}</div>
+                            <div class="status">
+                                <span class="status-badge ${item.status === 'installed' ? 'status-active' : 'status-inactive'}">
+                                    ${item.status === 'installed' ? '已安装' : '未安装'}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+        
+        function controlService(action, service) {
+            fetch('/api/service/control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, service })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    showModal('操作成功', `服务 ${service} ${action} 成功`);
+                    setTimeout(loadServices, 1000);
+                } else {
+                    showModal('操作失败', data.error || '操作失败');
+                }
+            });
+        }
+        
+        function installSoftware() {
+            const software = document.getElementById('software-select').value;
+            const version = document.getElementById('version-input').value;
+            
+            if (!software) {
+                showModal('错误', '请选择要安装的软件');
+                return;
+            }
+            
+            fetch('/api/software/install', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ software, version })
+            }).then(r => r.json()).then(data => {
+                const output = document.createElement('pre');
+                output.textContent = data.output + '\n' + data.error;
+                showModal(data.success ? '安装成功' : '安装失败', output.outerHTML);
+                if (data.success) loadInstalledSoftware();
+            });
+        }
+        
+        function runHealthcheck() {
+            const output = document.getElementById('healthcheck-output');
+            output.textContent = '正在执行健康检查...';
+            
+            fetch('/api/healthcheck', { method: 'POST' }).then(r => r.json()).then(data => {
+                output.textContent = data.output + (data.error ? '\n错误: ' + data.error : '');
+            });
+        }
+        
+        function runSecurityScan() {
+            const output = document.getElementById('security-output');
+            output.textContent = '正在执行安全扫描...';
+            
+            fetch('/api/security', { method: 'POST' }).then(r => r.json()).then(data => {
+                output.textContent = data.output + (data.error ? '\n错误: ' + data.error : '');
+            });
+        }
+        
+        function runDailyCheck() {
+            const output = document.getElementById('daily-output');
+            output.textContent = '正在执行日常巡检...';
+            
+            fetch('/api/daily', { method: 'POST' }).then(r => r.json()).then(data => {
+                output.textContent = data.output + (data.error ? '\n错误: ' + data.error : '');
+            });
+        }
+        
+        function runBackup() {
+            const target = document.getElementById('backup-target').value;
+            const output = document.getElementById('backup-output');
+            output.textContent = `正在备份 ${target}...`;
+            
+            fetch('/api/backup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target })
+            }).then(r => r.json()).then(data => {
+                output.textContent = data.output + (data.error ? '\n错误: ' + data.error : '');
+            });
+        }
+        
+        function checkUpdate() {
+            const output = document.getElementById('update-output');
+            output.textContent = '正在检查更新...';
+            
+            fetch('/api/update/check').then(r => r.json()).then(data => {
+                output.textContent = data.output;
+            });
+        }
+        
+        function runUpdate() {
+            const output = document.getElementById('update-output');
+            output.textContent = '正在执行升级...';
+            
+            fetch('/api/update', { method: 'POST' }).then(r => r.json()).then(data => {
+                output.textContent = data.output + (data.error ? '\n错误: ' + data.error : '');
+            });
+        }
+        
+        function getLogs() {
+            const service = document.getElementById('log-select').value;
+            const output = document.getElementById('logs-output');
+            output.textContent = `正在获取 ${service} 日志...`;
+            
+            fetch(`/api/logs/${service}`).then(r => r.json()).then(data => {
+                output.textContent = data.data;
+            });
+        }
+        
+        function showModal(title, body) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-body').innerHTML = body;
+            document.getElementById('modal').classList.add('show');
+        }
+        
+        function closeModal() {
+            document.getElementById('modal').classList.remove('show');
+        }
+        
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('system-time').textContent = now.toLocaleString('zh-CN');
+        }
+        
+        updateTime();
+        setInterval(updateTime, 1000);
+        loadDashboard();
+    </script>
+</body>
+</html>

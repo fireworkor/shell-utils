@@ -152,6 +152,49 @@ ${YELLOW}配置管理：${NC}
   config show       显示当前配置
   config set <key> <value>  设置配置项
 
+${YELLOW}Web UI：${NC}
+  webui            启动运维管理平台
+  webui start      启动服务
+  webui stop       停止服务
+
+${YELLOW}Kubernetes 工具：${NC}
+  argo-cd          安装 Argo CD (GitOps)
+  jaeger           安装 Jaeger (分布式追踪)
+  istio            安装 Istio (服务网格)
+  linkerd          安装 Linkerd (服务网格)
+  kong             安装 Kong (API Gateway)
+  apisix           安装 Apache APISIX (API 网关)
+  consul           安装 Consul (服务发现)
+  vault            安装 HashiCorp Vault (密钥管理)
+
+${YELLOW}消息队列：${NC}
+  nats             安装 NATS (高性能消息系统)
+  pulsar           安装 Apache Pulsar (云原生消息队列)
+
+${YELLOW}多云管理：${NC}
+  cloud            多云账户管理
+  deploy           自动化部署平台
+  cost             成本优化工具
+  compliance       合规性检查
+
+${YELLOW}PVE虚拟机部署：${NC}
+  pve              PVE虚拟机管理
+  pve config       配置PVE连接信息
+  pve list         列出当前配置
+  pve create       显示VM创建说明
+  pve start <ID>   显示VM启动说明
+  pve stop <ID>    显示VM停止说明
+  pve destroy <ID> 显示VM销毁说明
+  pve status <ID>  显示VM状态查看说明
+  pve deploy <ID> <软件>... 部署软件到VM
+                        支持软件: nginx, mysql, mariadb, php, redis, 
+                        docker, nodejs, python, java, postgresql, 
+                        mongodb, elasticsearch, kubernetes
+
+${YELLOW}交互式菜单：${NC}
+  menu             启动交互式安装菜单
+  menu <host> <user> <password> [port]  远程部署
+
 ${YELLOW}示例：${NC}
   $0 install nginx
   $0 install php 8.0
@@ -160,6 +203,9 @@ ${YELLOW}示例：${NC}
   $0 uninstall mysql
   $0 status
   $0 log 50
+  $0 pve config
+  $0 pve create myvm
+  $0 pve deploy 100 nginx mysql
 
 EOF
 }
@@ -610,6 +656,61 @@ main() {
             ;;
         update)
             bash "$SCRIPT_DIR/update.sh" "$@"
+            ;;
+        webui)
+            if [ "$1" = "stop" ]; then
+                bash "$SCRIPT_DIR/webui/stop.sh"
+            else
+                bash "$SCRIPT_DIR/webui/start.sh"
+            fi
+            ;;
+        argo-cd)
+            bash "$SCRIPT_DIR/argocd/argocd.sh" "$@"
+            ;;
+        jaeger)
+            bash "$SCRIPT_DIR/jaeger/jaeger.sh" "$@"
+            ;;
+        istio)
+            bash "$SCRIPT_DIR/istio/istio.sh" "$@"
+            ;;
+        kong)
+            bash "$SCRIPT_DIR/kong/kong.sh" "$@"
+            ;;
+        consul)
+            bash "$SCRIPT_DIR/consul/consul.sh" "$@"
+            ;;
+        vault)
+            bash "$SCRIPT_DIR/vault/vault.sh" "$@"
+            ;;
+        apisix)
+            bash "$SCRIPT_DIR/apisix/apisix.sh" "$@"
+            ;;
+        linkerd)
+            bash "$SCRIPT_DIR/linkerd/linkerd.sh" "$@"
+            ;;
+        nats)
+            bash "$SCRIPT_DIR/nats/nats.sh" "$@"
+            ;;
+        pulsar)
+            bash "$SCRIPT_DIR/pulsar/pulsar.sh" "$@"
+            ;;
+        cloud)
+            bash "$SCRIPT_DIR/cloud-manager/cloud-manager.sh" "$@"
+            ;;
+        deploy)
+            bash "$SCRIPT_DIR/deploy-platform/deploy-platform.sh" "$@"
+            ;;
+        cost)
+            bash "$SCRIPT_DIR/cost-optimizer/cost-optimizer.sh" "$@"
+            ;;
+        compliance)
+            bash "$SCRIPT_DIR/compliance/compliance.sh" "$@"
+            ;;
+        pve)
+            bash "$SCRIPT_DIR/pve/pve.sh" "$@"
+            ;;
+        menu)
+            bash "$SCRIPT_DIR/menu.sh" "$@"
             ;;
         *)
             print_error "未知命令: $command"

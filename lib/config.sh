@@ -4,8 +4,8 @@
 # 配置管理
 # =========================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/../config/versions.conf"
+_CONFIG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="$_CONFIG_DIR/../config/versions.conf"
 
 load_config() {
     if [ -f "$CONFIG_FILE" ]; then
