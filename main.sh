@@ -85,10 +85,15 @@ ${YELLOW}运维工具：${NC}
   mirror [源]       设置镜像源
   firewall          防火墙管理
 
-${YELLOW}大数据组件：${NC}
-  hadoop [mode]     部署 Hadoop (pseudo/stop/status)
-  spark [mode]      部署 Spark (local/standalone/stop/status/shell)
-  flink [mode]      部署 Flink (local/cluster/stop/status/sql)
+${YELLOW}大数据组件:${NC}
+  hadoop [mode]     - 部署 Hadoop (pseudo/stop/status)
+  spark [mode]      - 部署 Spark (local/standalone/stop/status/shell)
+  flink [mode]      - 部署 Flink (local/cluster/stop/status/sql)
+  hbase [mode]      - 部署 HBase (standalone/pseudo/stop/status/shell)
+  hive [mode]       - 部署 Hive (install/shell/beeline/metastore/hiveserver2/status)
+  airflow [mode]    - 部署 Airflow (install/start/stop/status/webserver/scheduler)
+  flume [mode]      - 部署 Flume (install/start/status)
+  zeppelin [mode]   - 部署 Zeppelin (install/start/stop/restart/status)
 
 ${YELLOW}一键部署：${NC}
   lnmp              LNMP 栈
@@ -470,6 +475,21 @@ main() {
             ;;
         flink)
             install_software flink "$@"
+            ;;
+        hbase)
+            install_software hbase "$@"
+            ;;
+        hive)
+            install_software hive "$@"
+            ;;
+        airflow)
+            install_software airflow "$@"
+            ;;
+        flume)
+            install_software flume "$@"
+            ;;
+        zeppelin)
+            install_software zeppelin "$@"
             ;;
         lnmp)
             install_lnmp
