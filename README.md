@@ -1,6 +1,6 @@
 # Shell 工具函数集合
 
-一个包含常用 Shell 脚本工具函数的项目，提供了日志、文件操作、系统信息、网络检查、CentOS 8 软件部署等功能。
+一个包含常用 Shell 脚本工具函数的项目，提供了日志、文件操作、系统信息、网络检查、CentOS 8 软件部署和内核调优等功能。
 
 ## 🚀 一键远程安装（推荐）
 
@@ -31,8 +31,8 @@ curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install
 # 3. 安装 Docker
 curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | sudo bash -s -- docker
 
-# 4. 安装 Nginx
-curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | sudo bash -s -- nginx
+# 4. 安装 MariaDB 10.5
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | sudo bash -s -- mariadb
 
 # 5. 安装 PHP 8.0
 curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | sudo bash -s -- php 8.0
@@ -40,11 +40,11 @@ curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install
 # 6. 安装 Python 3.11
 curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | sudo bash -s -- python 3.11
 
-# 7. 检查磁盘使用
-curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | bash -s -- check_disk
+# 7. 内核调优（根据内存自动优化）
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | sudo bash -s -- tune_kernel
 
-# 8. 检查网络连接
-curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | bash -s -- check_network
+# 8. 检查磁盘使用
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | bash -s -- check_disk
 ```
 
 ## 📋 所有可用命令
@@ -65,6 +65,7 @@ curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install
 | `nginx` | 安装 Nginx | `nginx` |
 | `apache` | 安装 Apache | `apache` |
 | `mysql` | 安装 MySQL 8.0 | `mysql` |
+| `mariadb` | 安装 MariaDB 10.5 | `mariadb` |
 | `postgresql` | 安装 PostgreSQL 15 | `postgresql` |
 | `php [版本]` | 安装 PHP | `php 8.0` |
 | `python [版本]` | 安装 Python | `python 3.11` |
@@ -73,16 +74,79 @@ curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install
 | `docker` | 安装 Docker | `docker` |
 | `redis` | 安装 Redis | `redis` |
 
+### 性能优化命令（需要 root）
+
+| 命令 | 说明 | 适用场景 |
+|------|------|----------|
+| `tune_kernel` | 自动调优内核参数 | 根据内存大小自动优化内核配置 |
+
 ### 一键部署方案（需要 root）
 
 | 命令 | 说明 |
 |------|------|
-| `lnmp` | 一键安装 LNMP 栈（Nginx + MySQL + PHP） |
-| `lamp` | 一键安装 LAMP 栈（Apache + MySQL + PHP） |
+| `lnmp` | 一键安装 LNMP 栈（Nginx + MariaDB + PHP） |
+| `lamp` | 一键安装 LAMP 栈（Apache + MariaDB + PHP） |
 | `dev_tools` | 安装开发工具（gcc, git, make 等） |
 | `common_tools` | 安装常用工具（htop, nmap, tcpdump 等） |
 | `firewall` | 配置防火墙（开放常用端口） |
 | `all` | 安装所有基础服务 |
+
+## 🔧 内核调优详解
+
+### tune_kernel 命令
+
+自动根据服务器内存大小应用最优的内核参数配置。
+
+### 内存配置方案
+
+| 内存范围 | 配置方案 | 说明 |
+|---------|---------|------|
+| < 1GB | tiny | 极小内存配置 |
+| 1-2GB | small | 小型服务器配置 |
+| 2-4GB | medium | 中型服务器配置 |
+| 4-8GB | large | 大型服务器配置 |
+| 8-16GB | xlarge | 超大型服务器配置 |
+| 16-32GB | 2xlarge | 双倍超大型配置 |
+| 32-64GB | 4xlarge | 四倍超大型配置 |
+| > 64GB | 8xlarge | 八倍超大型配置 |
+
+### 优化的内核参数
+
+- **网络参数**: TCP 缓冲区、连接数、超时时间等
+- **文件系统参数**: 文件描述符限制、swappiness 等
+- **内存参数**: 共享内存、内存映射数等
+- **系统限制**: nofile、nproc 等
+
+### 使用示例
+
+```bash
+# 在 CentOS 8 服务器上运行
+curl -fsSL https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh | sudo bash -s -- tune_kernel
+
+# 或者先下载脚本再运行
+wget https://raw.githubusercontent.com/fireworkor/shell-utils/main/install.sh
+chmod +x install.sh
+sudo ./install.sh tune_kernel
+```
+
+## 📊 MariaDB vs MySQL
+
+项目中同时提供了 MariaDB 和 MySQL 的安装选项：
+
+| 特性 | MariaDB | MySQL |
+|------|---------|-------|
+| 版本 | 10.5 | 8.0 |
+| 兼容性 | MySQL 兼容 | Oracle MySQL |
+| 默认配置 | 更优 | 标准 |
+| 推荐场景 | 生产环境 | 特定需求 |
+
+### 推荐使用 MariaDB
+
+- ✅ 完全开源
+- ✅ 更活跃的社区
+- ✅ 默认配置更优
+- ✅ 更好的性能
+- ✅ 完全兼容 MySQL
 
 ## 功能介绍
 
@@ -155,11 +219,10 @@ sudo ./deploy-centos8.sh help
 
 # 单个软件安装
 sudo ./deploy-centos8.sh install_nginx
-sudo ./deploy-centos8.sh install_docker
+sudo ./deploy-centos8.sh install_mariadb
 
-# 指定版本
-sudo ./deploy-centos8.sh install_php 8.0
-sudo ./deploy-centos8.sh install_nodejs 18
+# 内核调优（完整版）
+sudo ./tune-kernel.sh
 ```
 
 ## 文件说明
@@ -168,6 +231,7 @@ sudo ./deploy-centos8.sh install_nodejs 18
 - `utils.sh` - 工具函数集合
 - `example.sh` - 工具函数使用示例
 - `deploy-centos8.sh` - CentOS 8 完整部署脚本
+- `tune-kernel.sh` - 内核调优脚本（完整版）
 - `deploy-to-github.sh` - 一键部署到 GitHub 脚本
 - `README.md` - 项目说明文档
 

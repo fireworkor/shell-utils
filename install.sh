@@ -10,12 +10,12 @@
 
 set -e
 
-# 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
 # 检查参数
@@ -37,13 +37,17 @@ if [ $# -eq 0 ]; then
     echo "  nginx                - 安装 Nginx"
     echo "  apache               - 安装 Apache"
     echo "  mysql                - 安装 MySQL 8.0"
+    echo "  mariadb              - 安装 MariaDB 10.5"
     echo "  postgresql           - 安装 PostgreSQL"
     echo "  php [版本]           - 安装 PHP (默认: 7.4)"
-    echo "  python [版本]        - 安装 Python (默认: 3.11)"
-    echo "  nodejs [版本]        - 安装 Node.js (默认: 20)"
+    echo "  python [版本]         - 安装 Python (默认: 3.11)"
+    echo "  nodejs [版本]         - 安装 Node.js (默认: 20)"
     echo "  docker               - 安装 Docker"
     echo "  redis                - 安装 Redis"
     echo "  java [版本]          - 安装 OpenJDK (默认: 11)"
+    echo ""
+    echo -e "${YELLOW}性能优化命令：${NC}"
+    echo "  tune_kernel          - 自动调优内核参数（根据内存大小）"
     echo ""
     echo -e "${YELLOW}一键部署方案：${NC}"
     echo "  lnmp                 - 一键安装 LNMP 栈"
@@ -57,12 +61,12 @@ if [ $# -eq 0 ]; then
     echo "  curl ... | bash -s -- system_info"
     echo "  curl ... | bash -s -- nginx"
     echo "  curl ... | bash -s -- php 8.0"
+    echo "  curl ... | sudo bash -s -- tune_kernel"
     echo "  curl ... | sudo bash -s -- lnmp"
     echo ""
     exit 0
 fi
 
-# 检查是否为 root 用户
 check_root() {
     if [ "$EUID" -ne 0 ]; then
         echo -e "${RED}错误：请使用 root 用户运行此脚本${NC}"
@@ -71,7 +75,6 @@ check_root() {
     fi
 }
 
-# 检查 CentOS 8
 check_centos8() {
     if [ ! -f /etc/centos-release ]; then
         echo -e "${RED}错误：此脚本仅支持 CentOS 8${NC}"
@@ -154,6 +157,51 @@ install_mysql() {
     systemctl start mysqld && systemctl enable mysqld
     echo -e "${GREEN}✓ MySQL 安装完成${NC}"
     echo "临时密码: $(grep 'temporary password' /var/log/mysqld.log | awk '{print $NF}')"
+}
+
+# 安装 MariaDB
+install_mariadb() {
+    echo -e "${BLUE}正在安装 MariaDB 10.5...${NC}"
+    
+    # 创建 MariaDB 仓库
+    cat > /etc/yum.repos.d/mariadb.repo << 'EOF'
+[mariadb]
+name = MariaDB
+baseurl = http://yum.mariadb.org/10.5/centos8-amd64
+gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+gpgcheck=1
+EOF
+    
+    # 安装 MariaDB
+    dnf install -y MariaDB-server MariaDB-client MariaDB-common
+    
+    # 启动并设置开机启动
+    systemctl start mariadb
+    systemctl enable mariadb
+    
+    # 安全初始化
+    echo -e "${YELLOW}正在运行 MariaDB 安全初始化...${NC}"
+    mysql_secure_installation << 'MARIADB_EOF'
+
+y
+y
+y
+y
+y
+y
+y
+MARIADB_EOF
+    
+    echo -e "${GREEN}✓ MariaDB 安装完成${NC}"
+    echo ""
+    echo "管理命令:"
+    echo "  启动: systemctl start mariadb"
+    echo "  停止: systemctl stop mariadb"
+    echo "  重启: systemctl restart mariadb"
+    echo "  状态: systemctl status mariadb"
+    echo ""
+    echo "连接命令:"
+    echo "  mysql -u root -p"
 }
 
 # 安装 PostgreSQL
@@ -245,11 +293,155 @@ install_redis() {
     echo -e "${GREEN}✓ Redis 安装完成${NC}"
 }
 
+# 内核调优
+tune_kernel() {
+    check_root
+    
+    local mem_gb=$(free -g | awk 'NR==2 {print $2}')
+    local mem_mb=$(free -m | awk 'NR==2 {print $2}')
+    
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}   CentOS 8 内核调优${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo ""
+    echo -e "${YELLOW}检测到内存: ${mem_gb}GB${NC}"
+    
+    # 确定配置方案
+    local profile=""
+    if [ $mem_gb -lt 1 ]; then
+        profile="tiny"
+    elif [ $mem_gb -lt 2 ]; then
+        profile="small"
+    elif [ $mem_gb -lt 4 ]; then
+        profile="medium"
+    elif [ $mem_gb -lt 8 ]; then
+        profile="large"
+    elif [ $mem_gb -lt 16 ]; then
+        profile="xlarge"
+    elif [ $mem_gb -lt 32 ]; then
+        profile="2xlarge"
+    elif [ $mem_gb -lt 64 ]; then
+        profile="4xlarge"
+    else
+        profile="8xlarge"
+    fi
+    
+    echo -e "${YELLOW}配置方案: ${profile}${NC}"
+    echo ""
+    
+    # 根据内存大小应用不同配置
+    echo -e "${BLUE}正在应用内核参数...${NC}"
+    
+    local tcp_mem_max=""
+    local tcp_rmem_max=""
+    local tcp_wmem_max=""
+    local file_max=""
+    local nofile_limit=""
+    
+    # 计算参数
+    if [ $mem_gb -lt 2 ]; then
+        tcp_mem_max="786432 1048576 1572864"
+        tcp_rmem_max="4096 87380 4194304"
+        tcp_wmem_max="4096 65536 4194304"
+        file_max="65536"
+        nofile_limit="65536"
+    elif [ $mem_gb -lt 4 ]; then
+        tcp_mem_max="1572864 2097152 3145728"
+        tcp_rmem_max="4096 87380 16777216"
+        tcp_wmem_max="4096 65536 16777216"
+        file_max="2097152"
+        nofile_limit="131072"
+    elif [ $mem_gb -lt 8 ]; then
+        tcp_mem_max="3145728 4194304 6291456"
+        tcp_rmem_max="4096 87380 67108864"
+        tcp_wmem_max="4096 65536 67108864"
+        file_max="4194304"
+        nofile_limit="262144"
+    elif [ $mem_gb -lt 16 ]; then
+        tcp_mem_max="6291456 8388608 12582912"
+        tcp_rmem_max="4096 87380 134217728"
+        tcp_wmem_max="4096 65536 134217728"
+        file_max="4194304"
+        nofile_limit="524288"
+    elif [ $mem_gb -lt 32 ]; then
+        tcp_mem_max="12582912 16777216 25165824"
+        tcp_rmem_max="4096 87380 268435456"
+        tcp_wmem_max="4096 65536 268435456"
+        file_max="8388608"
+        nofile_limit="524288"
+    else
+        tcp_mem_max="25165824 33554432 50331648"
+        tcp_rmem_max="4096 87380 536870912"
+        tcp_wmem_max="4096 65536 536870912"
+        file_max="16777216"
+        nofile_limit="524288"
+    fi
+    
+    # 创建配置文件
+    cat > /etc/sysctl.d/99-tuning.conf << EOF
+# CentOS 8 内核调优配置 - $profile 方案
+# 内存: ${mem_gb}GB
+
+# 网络参数
+net.core.rmem_max = $tcp_rmem_max
+net.core.wmem_max = $tcp_wmem_max
+net.ipv4.tcp_rmem = $tcp_rmem_max
+net.ipv4.tcp_wmem = $tcp_wmem_max
+net.ipv4.tcp_mem = $tcp_mem_max
+net.ipv4.tcp_slow_start_after_idle = 0
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcp_fin_timeout = 15
+net.ipv4.tcp_max_orphans = 262144
+net.ipv4.tcp_max_tw_buckets = 262144
+net.ipv4.ip_local_port_range = 10240 65535
+net.core.netdev_max_backlog = 5000
+net.core.somaxconn = 8192
+net.ipv4.tcp_max_syn_backlog = 8192
+net.ipv4.tcp_keepalive_time = 600
+net.ipv4.tcp_keepalive_probes = 3
+net.ipv4.tcp_keepalive_intvl = 15
+
+# 文件系统参数
+fs.file-max = $file_max
+fs.inotify.max_user_watches = 524288
+vm.swappiness = 10
+vm.dirty_ratio = 60
+vm.dirty_background_ratio = 5
+vm.overcommit_memory = 1
+vm.max_map_count = 262144
+
+# 内核参数
+kernel.shmmax = $((mem_gb * 1024 * 1024 * 1024 / 4))
+kernel.shmall = $((mem_gb * 1024 * 1024 * 1024 / 4096))
+kernel.sem = 250 64000 100 512
+kernel.pid_max = 65536
+EOF
+    
+    # 应用配置
+    sysctl -p /etc/sysctl.d/99-tuning.conf > /dev/null 2>&1 || true
+    
+    # 配置 limits
+    cat > /etc/security/limits.d/99-tuning.conf << EOF
+* soft nofile $nofile_limit
+* hard nofile $nofile_limit
+* soft nproc 65536
+* hard nproc 65536
+root soft nofile $nofile_limit
+root hard nofile $nofile_limit
+EOF
+    
+    ulimit -n $nofile_limit 2>/dev/null || true
+    
+    echo -e "${GREEN}✓ 内核调优完成${NC}"
+    echo ""
+    echo -e "${YELLOW}建议重启系统使配置完全生效: reboot${NC}"
+}
+
 # 安装 LNMP
 install_lnmp() {
     echo -e "${PURPLE}开始安装 LNMP 栈...${NC}"
     install_nginx
-    install_mysql
+    install_mariadb
     install_php 7.4
     configure_firewall
     echo ""
@@ -262,7 +454,7 @@ install_lnmp() {
 install_lamp() {
     echo -e "${PURPLE}开始安装 LAMP 栈...${NC}"
     install_apache
-    install_mysql
+    install_mariadb
     install_php 7.4
     echo ""
     echo -e "${GREEN}========================================${NC}"
@@ -277,10 +469,11 @@ install_all() {
     install_dev_tools
     install_common_tools
     install_nginx
-    install_mysql
+    install_mariadb
     install_php 7.4
     install_docker
     configure_firewall
+    tune_kernel
     echo ""
     echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}✓ 所有基础服务安装完成！${NC}"
@@ -291,10 +484,10 @@ install_all() {
 show_system_info() {
     echo -e "${BLUE}系统信息：${NC}"
     echo "  主机名: $(hostname)"
-    echo "  操作系统: $(cat /etc/centos-release)"
+    echo "  操作系统: $(cat /etc/centos-release 2>/dev/null || cat /etc/redhat-release 2>/dev/null || uname -s)"
     echo "  内核版本: $(uname -r)"
     echo "  架构: $(uname -m)"
-    echo "  运行时间: $(uptime -p)"
+    echo "  运行时间: $(uptime -p 2>/dev/null || uptime)"
     echo "  负载: $(uptime | awk -F'load average:' '{print $2}')"
     echo "  内存使用:"
     free -h | awk 'NR==2 {printf "    总计: %s\n    已用: %s\n    空闲: %s\n", $2, $3, $4}'
@@ -387,6 +580,10 @@ main() {
             check_root "$@"
             install_mysql
             ;;
+        mariadb)
+            check_root "$@"
+            install_mariadb
+            ;;
         postgresql)
             check_root "$@"
             install_postgresql
@@ -414,6 +611,9 @@ main() {
         redis)
             check_root "$@"
             install_redis
+            ;;
+        tune_kernel)
+            tune_kernel
             ;;
         lnmp)
             check_root "$@"
