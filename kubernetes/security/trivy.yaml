@@ -1,0 +1,80 @@
+# Trivy 部署
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: security
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trivy
+  namespace: security
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trivy
+rules:
+  - apiGroups: ["*"]
+    resources: ["pods", "deployments", "statefulsets", "daemonsets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: trivy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: trivy
+subjects:
+  - kind: ServiceAccount
+    name: trivy
+    namespace: security
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trivy
+  namespace: security
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trivy
+  template:
+    metadata:
+      labels:
+        app: trivy
+    spec:
+      serviceAccountName: trivy
+      containers:
+        - name: trivy
+          image: aquasec/trivy:0.45.0
+          ports:
+            - containerPort: 8080
+              name: http
+          args:
+            - --server
+            - --listen
+            - "0.0.0.0:8080"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              cpu: 500m
+              memory: 500Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trivy
+  namespace: security
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: trivy

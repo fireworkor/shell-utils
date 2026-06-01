@@ -1,0 +1,132 @@
+# Falco 运行时安全监控
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: falco
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: falco
+  namespace: falco
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: falco
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "nodes"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["daemonsets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: falco
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: falco
+subjects:
+  - kind: ServiceAccount
+    name: falco
+    namespace: falco
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: falco
+  namespace: falco
+spec:
+  selector:
+    matchLabels:
+      app: falco
+  template:
+    metadata:
+      labels:
+        app: falco
+    spec:
+      serviceAccountName: falco
+      hostNetwork: true
+      hostPID: true
+      containers:
+        - name: falco
+          image: falcosecurity/falco:0.35.1
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          env:
+            - name: FALCO威布尔
+              value: "true"
+            - name: FALCO_K8S_LEGACY
+              value: "false"
+          volumeMounts:
+            - name: dev
+              mountPath: /host/dev
+            - name: usr
+              mountPath: /host/usr
+            - name: etc
+              mountPath: /host/etc
+            - name: rules
+              mountPath: /etc/falco/rules.d
+            - name: oci
+              mountPath: /opt/falco
+          args:
+            - /usr/bin/falco
+            - --containerized=true
+            - --disable-source=syscall
+            - --enable-source=k8s_audit
+      volumes:
+        - name: dev
+          hostPath:
+            path: /dev
+        - name: usr
+          hostPath:
+            path: /usr
+        - name: etc
+          hostPath:
+            path: /etc
+        - name: rules
+          configMap:
+            name: falco-rules
+        - name: oci
+          emptyDir: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falco-rules
+  namespace: falco
+data:
+  falco_rules.yaml: |
+    - rule: Terminal shell in container
+      desc: A shell was spawned in a container with an attached terminal
+      condition: >
+        spawned_process and
+        container and
+        proc.name == "bash"
+      output: >
+        Terminal shell in container
+        (user=%user.name container_id=%container.id
+        container_name=%container.name image=%container.image.repository)
+      priority: WARNING
+
+    - rule: Write below binary dir
+      desc: an attempt to write to any file below a set of binary directories
+      condition: >
+        write_to_binary_dirs and
+        not proc.name in (qa_utils)
+      output: >
+        File written to binary directory
+        (user=%user.name container_id=%container.id
+        file=%fd.name target=%container.image.repository)
+      priority: WARNING

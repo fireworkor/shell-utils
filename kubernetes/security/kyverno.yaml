@@ -1,0 +1,106 @@
+# Kyverno Kubernetes 策略引擎
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kyverno
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kyverno-service-account
+  namespace: kyverno
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kyverno:core:admin
+rules:
+  - apiGroups:
+      - '*'
+    resources:
+      - '*'
+    verbs:
+      - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kyverno:core:admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kyverno:core:admin
+subjects:
+  - kind: ServiceAccount
+    name: kyverno-service-account
+    namespace: kyverno
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kyverno
+  namespace: kyverno
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kyverno
+  template:
+    metadata:
+      labels:
+        app: kyverno
+    spec:
+      serviceAccountName: kyverno-service-account
+      containers:
+        - name: kyverno
+          image: kyverno/kyverno:v1.10.0
+          ports:
+            - containerPort: 9443
+              name: webhook
+            - containerPort: 8000
+              name: metrics
+          args:
+            - --metricsPort
+            - "8000"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kyverno-svc
+  namespace: kyverno
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 9443
+  selector:
+    app: kyverno
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kyverno:admin:policies
+rules:
+  - apiGroups: ["kyverno.io"]
+    resources: ["policies", "clusterpolicies"]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kyverno:admin:policies
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kyverno:admin:policies
+subjects:
+  - kind: ServiceAccount
+    name: kyverno-service-account
+    namespace: kyverno
