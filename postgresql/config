@@ -1,0 +1,11 @@
+# PostgreSQL 配置文件
+# 软件标识
+SOFTWARE_NAME="postgresql"
+SERVICE_NAME="postgresql"
+DISPLAY_NAME="PostgreSQL"
+
+# 默认端口（多个用逗号分隔）
+DEFAULT_PORTS="5432"
+
+# 其他配置
+BACKUP_ROOT="/var/backups/shell-utils/${SOFTWARE_NAME}"

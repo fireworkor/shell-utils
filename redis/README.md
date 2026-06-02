@@ -1,110 +1,142 @@
 # Redis 缓存数据库
 
 ## 简介
-Redis 是一个开源的内存数据结构存储系统，可用作数据库、缓存和消息队列。
+Redis（Remote Dictionary Server）是一个开源的、基于内存的数据结构存储系统，可以用作数据库、缓存和消息中间件。
 
-## 端口信息
-- Redis: 6379
-- Redis Sentinel: 26379 (集群模式)
+---
 
-## 使用命令
+## 端口与组件
 
+### 默认端口
+
+| 端口 | 用途 | 说明 |
+|------|------|------|
+| 6379 | Redis 服务 | 默认监听端口 |
+
+### 主要组件
+
+- **redis-server** - Redis 服务器
+- **redis-cli** - 命令行客户端
+- **redis-benchmark** - 性能测试工具
+- **redis-sentinel** - 哨兵（高可用）
+- **redis-cluster** - 集群管理
+
+### 访问入口
+
+- **本地连接**: `redis-cli`
+- **远程连接**: `redis-cli -h <IP> -p 6379`
+- **Web 管理**: RedisInsight、RedisDesktopManager
+
+---
+
+## 首次安装后必做设置
+
+### 1. 设置访问密码
 ```bash
-# 安装 Redis
-bash redis.sh
-
-# 启动服务
-systemctl start redis
-systemctl enable redis
-
-# 连接 Redis
-redis-cli
-
-# 查看版本
-redis-server --version
+sudo vim /etc/redis/redis.conf
+# requirepass yourStrongPassword
+sudo systemctl restart redis
 ```
 
-## 默认配置
-- 配置文件: `/etc/redis/redis.conf`
-- 数据目录: `/var/lib/redis/`
-- 日志文件: `/var/log/redis/redis.log`
-- PID 文件: `/var/run/redis/redis.pid`
-
-## 健康检查
-
-```bash
-# 基本检查
-redis-cli ping
-
-# 详细状态
-redis-cli info
-
-# 检查服务器
-redis-cli info server
-
-# 检查内存使用
-redis-cli info memory
-
-# 检查连接数
-redis-cli info clients
+### 2. 启用持久化
+默认已开启 RDB 持久化，建议同时启用 AOF：
+```
+appendonly yes
 ```
 
-## 备份
+### 3. 配置最大内存
+```
+maxmemory 2gb
+maxmemory-policy allkeys-lru
+```
+
+### 4. 限制远程访问
+```bash
+# 绑定特定 IP
+bind 127.0.0.1 192.168.1.100
+```
+
+### 5. 配置防火墙
+```bash
+sudo firewall-cmd --permanent --add-port=6379/tcp
+sudo firewall-cmd --reload
+```
+
+---
+
+## 详细使用说明
+
+### 常用命令
 
 ```bash
-# RDB 持久化备份（自动）
-# 配置文件中设置 save 规则
+# 连接
+redis-cli -a yourPassword
 
-# 手动 BGSAVE
+# 信息查看
+INFO
+INFO memory
+DBSIZE
+
+# 数据操作
+SET key value
+GET key
+DEL key
+EXPIRE key 60
+KEYS pattern
+
+# 性能测试
+redis-benchmark -h 127.0.0.1 -p 6379 -n 10000
+```
+
+### 备份与恢复
+
+```bash
+# 自动备份（配置 save 规则）
+# 手动备份
 redis-cli BGSAVE
 
-# 复制备份
-cp /var/lib/redis/dump.rdb /backup/dump_$(date +%Y%m%d).rdb
+# 使用脚本
+bash backup.sh all
 
-# AOF 备份
-cp /var/lib/redis/appendonly.aof /backup/appendonly_$(date +%Y%m%d).aof
+# 恢复
+sudo cp /var/backups/shell-utils/redis/data/redis_20250101.rdb /var/lib/redis/dump.rdb
+sudo chown redis:redis /var/lib/redis/dump.rdb
+sudo systemctl start redis
 ```
 
-## 恢复
-
+### 服务管理
 ```bash
-# 停止 Redis
-systemctl stop redis
-
-# 恢复 RDB 文件
-cp /backup/dump_20240101.rdb /var/lib/redis/dump.rdb
-
-# 设置权限
-chown redis:redis /var/lib/redis/dump.rdb
-
-# 启动 Redis
-systemctl start redis
+sudo systemctl start redis
+sudo systemctl stop redis
+sudo systemctl restart redis
+sudo systemctl enable redis
 ```
 
-## 集群
-```bash
-# 部署 Redis 集群
-bash ../redis-cluster/redis-cluster.sh install
-```
+---
 
-## 常用命令
+## 常见问题
 
-```bash
-# 设置键值
-SET key value
+### Q: 启动失败？
+A: 查看 `/var/log/redis/redis.log`
 
-# 获取值
-GET key
+### Q: 内存占用过高？
+A: 配置 maxmemory 和淘汰策略
 
-# 查看所有键
-KEYS *
+### Q: 性能调优？
+A: 调整 tcp-keepalive、timeout 参数
 
-# 查看信息
-INFO
+---
 
-# 清空所有数据
-FLUSHALL
-```
+## 后续改进方向
 
-## Web UI
-推荐使用 RedisInsight 或 phpRedisAdmin。
+1. Redis Sentinel（高可用）
+2. Redis Cluster（集群分片）
+3. 监控告警（Redis Exporter + Grafana）
+4. 慢查询日志
+5. 大 Key 治理
+
+---
+
+## 维护信息
+
+本文档随脚本集更新，如有问题请检查最新版本。

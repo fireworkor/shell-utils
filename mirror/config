@@ -1,0 +1,5 @@
+# Mirror 配置文件
+SOFTWARE_NAME="mirror"
+SERVICE_NAME="mirror"
+DISPLAY_NAME="Mirror"
+DEFAULT_PORTS="8080"

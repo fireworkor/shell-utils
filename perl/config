@@ -1,0 +1,5 @@
+# Perl 配置文件
+SOFTWARE_NAME="perl"
+SERVICE_NAME="perl"
+DISPLAY_NAME="Perl"
+DEFAULT_PORTS=""

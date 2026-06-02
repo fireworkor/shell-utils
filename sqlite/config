@@ -1,0 +1,5 @@
+# SQLite 配置文件
+SOFTWARE_NAME="sqlite"
+SERVICE_NAME="sqlite3"
+DISPLAY_NAME="SQLite"
+DEFAULT_PORTS=""

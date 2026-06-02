@@ -1,0 +1,5 @@
+# Zeppelin 配置文件
+SOFTWARE_NAME="zeppelin"
+SERVICE_NAME="zeppelin"
+DISPLAY_NAME="Zeppelin"
+DEFAULT_PORTS="8080"

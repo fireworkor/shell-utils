@@ -8,9 +8,6 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-REDIS='\033[0;31m'
-GREEN='\033[0;32m'
-
 check_service() {
     local service=$1
     if systemctl is-active --quiet $service 2>/dev/null; then

@@ -15,8 +15,15 @@ init_log() {
         touch "$LOG_FILE"
     fi
     
-    local size=$(stat -f%z "$LOG_FILE" 2>/dev/null || stat -c%s "$LOG_FILE" 2>/dev/null)
-    if [ "$size" -gt "$MAX_LOG_SIZE" ]; then
+    # 获取文件大小，兼容 BSD/macOS 和 Linux
+    local size=""
+    if [ "$(uname)" = "Darwin" ]; then
+        size=$(stat -f%z "$LOG_FILE" 2>/dev/null || echo 0)
+    else
+        size=$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
+    fi
+    
+    if [ -n "$size" ] && [ "$size" -gt "$MAX_LOG_SIZE" ]; then
         mv "$LOG_FILE" "${LOG_FILE}.old"
         touch "$LOG_FILE"
     fi

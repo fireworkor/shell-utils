@@ -1,0 +1,5 @@
+# ClickHouse 配置文件
+SOFTWARE_NAME="clickhouse"
+SERVICE_NAME="clickhouse"
+DISPLAY_NAME="ClickHouse"
+DEFAULT_PORTS="8123,9000"

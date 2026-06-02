@@ -1,0 +1,5 @@
+# ZooKeeper Cluster 配置文件
+SOFTWARE_NAME="zookeeper-cluster"
+SERVICE_NAME="zookeeper-cluster"
+DISPLAY_NAME="ZooKeeper Cluster"
+DEFAULT_PORTS="2181"

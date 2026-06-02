@@ -1,0 +1,5 @@
+# Dev Tools 配置文件
+SOFTWARE_NAME="dev-tools"
+SERVICE_NAME="dev-tools"
+DISPLAY_NAME="Dev Tools"
+DEFAULT_PORTS=""

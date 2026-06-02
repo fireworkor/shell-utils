@@ -1,0 +1,11 @@
+# MongoDB 配置文件
+# 软件标识
+SOFTWARE_NAME="mongodb"
+SERVICE_NAME="mongod"
+DISPLAY_NAME="MongoDB"
+
+# 默认端口（多个用逗号分隔）
+DEFAULT_PORTS="27017"
+
+# 其他配置
+BACKUP_ROOT="/var/backups/shell-utils/${SOFTWARE_NAME}"

@@ -1,0 +1,5 @@
+# Linkerd 配置文件
+SOFTWARE_NAME="linkerd"
+SERVICE_NAME="linkerd"
+DISPLAY_NAME="Linkerd"
+DEFAULT_PORTS="8086"

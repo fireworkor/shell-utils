@@ -1,0 +1,5 @@
+# Spark 配置文件
+SOFTWARE_NAME="spark"
+SERVICE_NAME="spark"
+DISPLAY_NAME="Spark"
+DEFAULT_PORTS="7077,8080"

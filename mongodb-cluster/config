@@ -1,0 +1,5 @@
+# MongoDB Cluster 配置文件
+SOFTWARE_NAME="mongodb-cluster"
+SERVICE_NAME="mongodb-cluster"
+DISPLAY_NAME="MongoDB Cluster"
+DEFAULT_PORTS="27017"

@@ -1,0 +1,5 @@
+# Docker Compose Templates 配置文件
+SOFTWARE_NAME="docker-compose-templates"
+SERVICE_NAME="docker-compose"
+DISPLAY_NAME="Docker Compose Templates"
+DEFAULT_PORTS=""

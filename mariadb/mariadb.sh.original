@@ -1,0 +1,68 @@
+#!/bin/bash
+# 描述：安装 MariaDB 数据库
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -f "$SCRIPT_DIR/../lib/common.sh" ]; then
+    source "$SCRIPT_DIR/../lib/common.sh"
+fi
+
+install_mariadb() {
+    check_root
+    check_os
+    local pkg_manager=$(get_pkg_manager)
+    
+    echo -e "${BLUE}正在安装 MariaDB...${NC}"
+    
+    # 先尝试从系统仓库安装，失败才添加官方仓库
+    case $pkg_manager in
+        dnf)
+            if ! dnf install -y mariadb-server mariadb-client 2>/dev/null; then
+                # 添加 MariaDB 官方仓库
+                cat > /etc/yum.repos.d/mariadb.repo << 'EOF'
+[mariadb]
+name = MariaDB
+baseurl = http://yum.mariadb.org/10.5/centos8-amd64
+gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+gpgcheck=1
+EOF
+                dnf install -y MariaDB-server MariaDB-client MariaDB-common
+            fi
+            ;;
+        yum)
+            if ! yum install -y mariadb-server mariadb-client 2>/dev/null; then
+                # 添加 MariaDB 官方仓库
+                cat > /etc/yum.repos.d/mariadb.repo << 'EOF'
+[mariadb]
+name = MariaDB
+baseurl = http://yum.mariadb.org/10.5/centos7-amd64
+gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+gpgcheck=1
+EOF
+                yum install -y MariaDB-server MariaDB-client MariaDB-common
+            fi
+            ;;
+        apt)
+            export DEBIAN_FRONTEND=noninteractive
+            apt update -y
+            apt install -y mariadb-server mariadb-client
+            ;;
+    esac
+    
+    configure_firewall 3306
+    start_service mariadb
+    
+    echo -e "${YELLOW}MariaDB 安装完成，请手动运行 'mysql_secure_installation' 进行安全配置${NC}"
+    
+    print_success "MariaDB 安装完成"
+    echo ""
+    echo "管理命令："
+    echo "  mysql -u root -p"
+    echo "  systemctl start mariadb"
+    echo "  systemctl status mariadb"
+    echo "  mysql_secure_installation"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    install_mariadb
+fi

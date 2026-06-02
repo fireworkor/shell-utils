@@ -1,0 +1,5 @@
+# Elasticsearch Cluster 配置文件
+SOFTWARE_NAME="elasticsearch-cluster"
+SERVICE_NAME="elasticsearch-cluster"
+DISPLAY_NAME="Elasticsearch Cluster"
+DEFAULT_PORTS="9200,9300"

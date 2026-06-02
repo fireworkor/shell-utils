@@ -1,0 +1,5 @@
+# Istio 配置文件
+SOFTWARE_NAME="istio"
+SERVICE_NAME="istio"
+DISPLAY_NAME="Istio"
+DEFAULT_PORTS="15001,15006"

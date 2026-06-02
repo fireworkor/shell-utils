@@ -1,0 +1,5 @@
+# Cloud Manager 配置文件
+SOFTWARE_NAME="cloud-manager"
+SERVICE_NAME="cloud-manager"
+DISPLAY_NAME="Cloud Manager"
+DEFAULT_PORTS="8080"

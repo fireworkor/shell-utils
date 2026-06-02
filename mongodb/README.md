@@ -1,110 +1,135 @@
-# MongoDB 文档数据库
+# MongoDB NoSQL 数据库
 
 ## 简介
-MongoDB 是一个基于文档的 NoSQL 数据库，以 JSON 格式存储数据。
+MongoDB 是一个基于分布式文件存储的数据库，由 C++ 语言编写，旨在为 WEB 应用提供可扩展的高性能数据存储解决方案。
 
-## 端口信息
-- MongoDB: 27017
-- MongoDB Web Interface: 28017
+---
 
-## 使用命令
+## 端口与组件
 
+### 默认端口
+
+| 端口 | 用途 | 说明 |
+|------|------|------|
+| 27017 | MongoDB | 默认服务端口 |
+
+### 主要组件
+
+- **mongod** - 数据库主进程
+- **mongos** - 分片路由器
+- **mongosh** - 命令行客户端
+- **mongodump** - 备份工具
+- **mongorestore** - 恢复工具
+
+### 访问入口
+
+- **本地连接**: `mongosh`
+- **远程连接**: `mongosh mongodb://<IP>:27017`
+- **Web 管理**: MongoDB Compass、Studio 3T
+
+---
+
+## 首次安装后必做设置
+
+### 1. 验证安装
 ```bash
-# 安装 MongoDB
-bash mongodb.sh
-
-# 启动服务
-systemctl start mongod
-systemctl enable mongod
-
-# 连接 MongoDB
-mongosh
-
-# 查看版本
 mongod --version
+sudo systemctl status mongod
 ```
 
-## 默认配置
-- 配置文件: `/etc/mongod.conf`
-- 数据目录: `/var/lib/mongo/`
-- 日志文件: `/var/log/mongodb/mongod.log`
-- PID 文件: `/var/run/mongodb/mongod.pid`
-
-## 健康检查
-
-```bash
-# 检查服务状态
-systemctl status mongod
-
-# 检查端口
-netstat -tlnp | grep 27017
-
-# 连接测试
-mongosh --eval "db.adminCommand('ping')"
-
-# 查看服务器状态
-mongosh --eval "db.serverStatus()"
+### 2. 启用认证
+```yaml
+# /etc/mongod.conf
+security:
+  authorization: enabled
 ```
 
-## 备份
-
+### 3. 创建管理员用户
 ```bash
-# 全量备份
-mongodump --out /backup/mongo_$(date +%Y%m%d)
-
-# 压缩备份
-mongodump --gzip --out /backup/mongo_$(date +%Y%m%d)
-
-# 备份指定数据库
-mongodump --db myapp --out /backup/myapp_$(date +%Y%m%d)
-
-# 备份远程数据库
-mongodump --host 192.168.1.100 --port 27017 --out /backup/remote_$(date +%Y%m%d)
+mongosh
+```
+```javascript
+use admin
+db.createUser({
+  user: "admin",
+  pwd: "YourStrongPassword",
+  roles: [{ role: "userAdminAnyDatabase", db: "admin" }]
+})
 ```
 
-## 恢复
-
-```bash
-# 恢复全量备份
-mongorestore /backup/mongo_20240101
-
-# 恢复压缩备份
-mongorestore --gzip /backup/mongo_20240101
-
-# 恢复指定数据库
-mongorestore --db myapp /backup/myapp_20240101/myapp
-
-# 删除目标数据库后恢复
-mongorestore --drop /backup/mongo_20240101
+### 4. 配置远程访问
+```yaml
+net:
+  port: 27017
+  bindIp: 0.0.0.0
 ```
 
-## 集群
+### 5. 重启服务
 ```bash
-# 部署 MongoDB 集群
-bash ../mongodb-cluster/mongodb-cluster.sh install
+sudo systemctl restart mongod
 ```
 
-## 常用命令
-
+### 6. 配置防火墙
 ```bash
-# 查看数据库
-show dbs
+sudo firewall-cmd --permanent --add-port=27017/tcp
+sudo firewall-cmd --reload
+```
 
-# 切换/创建数据库
-use myapp
+---
 
-# 查看集合
-show collections
+## 详细使用说明
 
-# 插入文档
-db.users.insertOne({name: "test", age: 25})
-
-# 查询文档
+### 基本命令
+```javascript
+use mydb
+db.users.insertOne({ name: "Alice", age: 30 })
 db.users.find()
-
-# 更新文档
-db.users.updateOne({name: "test"}, {$set: {age: 30}})
+db.users.find({ age: { $gt: 25 } })
+db.users.updateOne({ name: "Alice" }, { $set: { age: 31 } })
+db.users.deleteOne({ name: "Alice" })
+db.users.createIndex({ name: 1 })
 ```
 
-## Web UI
-推荐使用 MongoDB Compass。
+### 备份与恢复
+```bash
+bash backup.sh all
+mongodump --db mydb --out /backup/
+mongorestore --db mydb /backup/mydb/
+```
+
+### 服务管理
+```bash
+sudo systemctl start mongod
+sudo systemctl stop mongod
+sudo systemctl restart mongod
+sudo systemctl enable mongod
+```
+
+---
+
+## 常见问题
+
+### Q: 连接被拒绝？
+A: 检查 bindIp、防火墙、是否启用认证
+
+### Q: 性能问题？
+A: 创建合适的索引
+
+### Q: 数据量过大？
+A: 启用分片集群
+
+---
+
+## 后续改进方向
+
+1. 副本集（高可用）
+2. 分片集群（水平扩展）
+3. 监控（MongoDB Atlas）
+4. 备份策略
+5. 安全加固（TLS/SSL）
+
+---
+
+## 维护信息
+
+本文档随脚本集更新，如有问题请检查最新版本。

@@ -1,0 +1,5 @@
+# HAProxy 配置文件
+SOFTWARE_NAME="haproxy"
+SERVICE_NAME="haproxy"
+DISPLAY_NAME="HAProxy"
+DEFAULT_PORTS="80,443"

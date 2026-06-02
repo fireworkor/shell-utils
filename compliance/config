@@ -1,0 +1,5 @@
+# Compliance 配置文件
+SOFTWARE_NAME="compliance"
+SERVICE_NAME="compliance"
+DISPLAY_NAME="Compliance"
+DEFAULT_PORTS=""

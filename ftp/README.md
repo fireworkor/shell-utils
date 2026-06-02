@@ -1,45 +1,126 @@
-# vsftpd (FTP 服务器)
+# FTP
 
-## 安装
+## 简介
+FTP 文件传输服务
 
+---
+
+## 端口与组件
+
+### 默认端口
+
+| 端口 | 用途 | 说明 |
+|------|------|------|
+| 21 | 服务端口 | |
+
+### 主要组件
+
+- **vsftpd**: 主服务/组件
+
+### 访问入口
+
+- **命令行**: `vsftpd`
+- **配置路径**: `/opt/ftp` 或 `/etc/ftp`
+
+---
+
+## 首次安装后必做设置
+
+### 1. 安装 FTP
 ```bash
-./ftp/ftp.sh
+cd ftp
+sudo bash install.sh
 ```
 
-## 管理
-
-使用 ftp-manage.sh 脚本进行配置和管理：
-
+### 2. 查看软件信息
 ```bash
-# 配置 FTP 服务（交互式）
-./ftp/ftp-manage.sh config
-
-# 添加 FTP 用户
-./ftp/ftp-manage.sh add-user <用户名>
-
-# 设置共享目录
-./ftp/ftp-manage.sh set-share <路径>
-
-# 查看服务状态
-./ftp/ftp-manage.sh status
-
-# 启动/停止/重启服务
-./ftp/ftp-manage.sh start
-./ftp/ftp-manage.sh stop
-./ftp/ftp-manage.sh restart
+bash info.sh
 ```
 
-## 端口
+### 3. 检查健康状态
+```bash
+bash healthcheck.sh
+```
 
-- 21 - FTP 控制端口
-- 40000-40100 - FTP 被动模式数据端口
+---
 
-## 配置文件
+## 详细使用说明
 
-- `/etc/vsftpd/vsftpd.conf` - vsftpd 主配置文件
+### 版本管理
+```bash
+bash version.sh show
+```
 
-## 说明
+### 端口管理
+```bash
+bash port.sh show
+```
 
-- 默认禁止匿名访问
-- 用户默认被 chroot 到共享目录
-- 支持被动模式访问
+### 备份与恢复
+```bash
+# 完整备份
+bash backup.sh all
+
+# 查看备份列表
+bash backup.sh list
+
+# 恢复备份
+bash restore.sh <备份文件>
+```
+
+### 服务管理
+```bash
+# 启动服务（如适用）
+sudo systemctl start vsftpd
+
+# 停止服务
+sudo systemctl stop vsftpd
+
+# 查看状态
+sudo systemctl status vsftpd
+```
+
+### 健康检查
+```bash
+bash healthcheck.sh
+```
+
+---
+
+## 配置与数据位置
+
+| 类型 | 路径 |
+|------|------|
+| 安装目录 | /opt/ftp |
+| 配置目录 | /etc/ftp |
+| 日志目录 | /var/log/ftp |
+| 数据目录 | /var/lib/ftp |
+
+---
+
+## 常见问题
+
+### Q: 如何安装 FTP？
+A: 运行 `bash install.sh` 或参考官方文档。
+
+### Q: 服务无法启动？
+A: 查看日志文件 `/var/log/ftp` 中的错误信息。
+
+### Q: 如何完全卸载？
+A: 运行 `bash uninstall.sh` 进行卸载。
+
+---
+
+## 后续改进方向
+
+1. **自动化部署**：完善安装脚本
+2. **监控集成**：添加 Prometheus 监控
+3. **日志管理**：配置日志轮转
+4. **安全加固**：启用认证和加密
+5. **高可用**：配置集群模式
+
+---
+
+## 维护信息
+
+本文档随脚本集更新，如有问题请检查最新版本。

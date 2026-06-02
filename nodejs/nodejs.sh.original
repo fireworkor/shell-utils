@@ -1,0 +1,60 @@
+#!/bin/bash
+# 描述：安装 Node.js（支持多版本）
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -f "$SCRIPT_DIR/../lib/common.sh" ]; then
+    source "$SCRIPT_DIR/../lib/common.sh"
+fi
+
+install_nodejs() {
+    local version=${1:-20}
+    check_root
+    check_os
+    local pkg_manager=$(get_pkg_manager)
+    
+    echo -e "${BLUE}正在安装 Node.js $version...${NC}"
+    
+    # 先尝试安装 curl
+    install_dependencies 2>/dev/null || true
+    
+    case $pkg_manager in
+        dnf|yum)
+            # 尝试使用 nodesource，如果失败则尝试系统仓库
+            if curl -fsSL https://rpm.nodesource.com/setup_${version}.x 2>/dev/null | bash -; then
+                ${pkg_manager} install -y nodejs
+            else
+                echo -e "${YELLOW}Nodesource 安装失败，尝试使用系统仓库...${NC}"
+                ${pkg_manager} install -y nodejs npm 2>/dev/null || true
+            fi
+            ;;
+        apt)
+            # 同样的逻辑，先尝试 nodesource，再尝试系统仓库
+            if curl -fsSL https://deb.nodesource.com/setup_${version}.x 2>/dev/null | bash -; then
+                apt install -y nodejs
+            else
+                echo -e "${YELLOW}Nodesource 安装失败，尝试使用系统仓库...${NC}"
+                apt update -y
+                apt install -y nodejs npm 2>/dev/null || true
+            fi
+            ;;
+    esac
+    
+    # 尝试更新 npm 和安装 yarn，但不强求
+    if command -v npm &>/dev/null; then
+        npm install -g npm yarn 2>/dev/null || true
+    fi
+    
+    print_success "Node.js $version 安装完成"
+    echo ""
+    if command -v node &>/dev/null; then
+        echo "Node.js 版本: $(node -v)"
+    fi
+    if command -v npm &>/dev/null; then
+        echo "npm 版本: $(npm -v)"
+    fi
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    install_nodejs "$@"
+fi

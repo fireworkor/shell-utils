@@ -1,0 +1,5 @@
+# Deploy Platform 配置文件
+SOFTWARE_NAME="deploy-platform"
+SERVICE_NAME="deploy-platform"
+DISPLAY_NAME="Deploy Platform"
+DEFAULT_PORTS="8080"

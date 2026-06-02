@@ -1,0 +1,5 @@
+# Examples 配置文件
+SOFTWARE_NAME="examples"
+SERVICE_NAME="examples"
+DISPLAY_NAME="Examples"
+DEFAULT_PORTS=""

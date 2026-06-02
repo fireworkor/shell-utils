@@ -1,0 +1,5 @@
+# Firewall 配置文件
+SOFTWARE_NAME="firewall"
+SERVICE_NAME="firewall"
+DISPLAY_NAME="Firewall"
+DEFAULT_PORTS=""

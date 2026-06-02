@@ -1,0 +1,5 @@
+# PostgreSQL Cluster 配置文件
+SOFTWARE_NAME="postgresql-cluster"
+SERVICE_NAME="postgresql-cluster"
+DISPLAY_NAME="PostgreSQL Cluster"
+DEFAULT_PORTS="5432"

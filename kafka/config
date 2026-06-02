@@ -1,0 +1,11 @@
+# Kafka 配置文件
+# 软件标识
+SOFTWARE_NAME="kafka"
+SERVICE_NAME="kafka"
+DISPLAY_NAME="Kafka"
+
+# 默认端口（多个用逗号分隔）
+DEFAULT_PORTS="9092"
+
+# 其他配置
+BACKUP_ROOT="/var/backups/shell-utils/${SOFTWARE_NAME}"

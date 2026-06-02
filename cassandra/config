@@ -1,0 +1,5 @@
+# Cassandra 配置文件
+SOFTWARE_NAME="cassandra"
+SERVICE_NAME="cassandra"
+DISPLAY_NAME="Cassandra"
+DEFAULT_PORTS="9042,7000"

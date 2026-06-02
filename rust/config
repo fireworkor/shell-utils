@@ -1,0 +1,5 @@
+# Rust 配置文件
+SOFTWARE_NAME="rust"
+SERVICE_NAME="rust"
+DISPLAY_NAME="Rust"
+DEFAULT_PORTS=""

@@ -1,0 +1,5 @@
+# Flume 配置文件
+SOFTWARE_NAME="flume"
+SERVICE_NAME="flume"
+DISPLAY_NAME="Flume"
+DEFAULT_PORTS="44444"

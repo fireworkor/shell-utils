@@ -1,0 +1,5 @@
+# Cleanup 配置文件
+SOFTWARE_NAME="cleanup"
+SERVICE_NAME="cleanup"
+DISPLAY_NAME="Cleanup"
+DEFAULT_PORTS=""

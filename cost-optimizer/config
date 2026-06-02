@@ -1,0 +1,5 @@
+# Cost Optimizer 配置文件
+SOFTWARE_NAME="cost-optimizer"
+SERVICE_NAME="cost-optimizer"
+DISPLAY_NAME="Cost Optimizer"
+DEFAULT_PORTS="8080"

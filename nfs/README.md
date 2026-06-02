@@ -1,81 +1,126 @@
-# NFS (网络文件系统)
+# NFS
 
-## 安装
+## 简介
+网络文件系统
 
+---
+
+## 端口与组件
+
+### 默认端口
+
+| 端口 | 用途 | 说明 |
+|------|------|------|
+| 2049 | 服务端口 | |
+
+### 主要组件
+
+- **nfs**: 主服务/组件
+
+### 访问入口
+
+- **命令行**: `nfs`
+- **配置路径**: `/opt/nfs` 或 `/etc/nfs`
+
+---
+
+## 首次安装后必做设置
+
+### 1. 安装 NFS
 ```bash
-./nfs/nfs.sh
+cd nfs
+sudo bash install.sh
 ```
 
-## 管理
-
-使用 nfs-manage.sh 脚本进行配置和管理：
-
+### 2. 查看软件信息
 ```bash
-# 配置 NFS 服务（交互式）
-./nfs/nfs-manage.sh config
-
-# 添加 NFS 共享导出
-./nfs/nfs-manage.sh add-export <路径> <IP段>
-
-# 移除 NFS 共享导出
-./nfs/nfs-manage.sh remove-export <路径>
-
-# 设置默认共享目录
-./nfs/nfs-manage.sh set-share-path <路径>
-
-# 列出所有共享导出
-./nfs/nfs-manage.sh list-exports
-
-# 显示当前挂载
-./nfs/nfs-manage.sh show-mounts
-
-# 查看服务状态
-./nfs/nfs-manage.sh status
-
-# 启动/停止/重启/重新加载服务
-./nfs/nfs-manage.sh start
-./nfs/nfs-manage.sh stop
-./nfs/nfs-manage.sh restart
-./nfs/nfs-manage.sh reload
+bash info.sh
 ```
 
-## 端口
-
-- 2049 - NFS 服务
-- 111 - RPC Bind
-
-## 配置文件
-
-- `/etc/exports` - NFS 导出配置文件
-
-## 客户端挂载
-
-### Linux/Mac 客户端
+### 3. 检查健康状态
 ```bash
-# 挂载 NFS 共享
-mount -t nfs 服务器IP:/data/nfs /mnt/nfs
-
-# 开机自动挂载（编辑 /etc/fstab）
-服务器IP:/data/nfs /mnt/nfs nfs defaults 0 0
+bash healthcheck.sh
 ```
 
-### Windows 客户端
-Windows 需要使用 NFS 客户端功能：
-1. 在"启用或关闭 Windows 功能"中启用"NFS服务"
-2. 使用 `mount 服务器IP:/data/nfs Z:` 命令挂载
+---
 
-## 导出参数说明
+## 详细使用说明
 
-- `rw` - 读写权限
-- `ro` - 只读权限
-- `sync` - 同步写入
-- `async` - 异步写入（性能更好，但数据安全性较低）
-- `no_root_squash` - 保留 root 用户权限
-- `root_squash` - root 用户映射为 anonymous（默认）
-- `no_subtree_check` - 不检查子目录（性能更好）
+### 版本管理
+```bash
+bash version.sh show
+```
 
-## 说明
+### 端口管理
+```bash
+bash port.sh show
+```
 
-- 默认允许所有 IP 访问 (*)
-- 默认共享权限：读写
-- 支持多个共享导出
+### 备份与恢复
+```bash
+# 完整备份
+bash backup.sh all
+
+# 查看备份列表
+bash backup.sh list
+
+# 恢复备份
+bash restore.sh <备份文件>
+```
+
+### 服务管理
+```bash
+# 启动服务（如适用）
+sudo systemctl start nfs
+
+# 停止服务
+sudo systemctl stop nfs
+
+# 查看状态
+sudo systemctl status nfs
+```
+
+### 健康检查
+```bash
+bash healthcheck.sh
+```
+
+---
+
+## 配置与数据位置
+
+| 类型 | 路径 |
+|------|------|
+| 安装目录 | /opt/nfs |
+| 配置目录 | /etc/nfs |
+| 日志目录 | /var/log/nfs |
+| 数据目录 | /var/lib/nfs |
+
+---
+
+## 常见问题
+
+### Q: 如何安装 NFS？
+A: 运行 `bash install.sh` 或参考官方文档。
+
+### Q: 服务无法启动？
+A: 查看日志文件 `/var/log/nfs` 中的错误信息。
+
+### Q: 如何完全卸载？
+A: 运行 `bash uninstall.sh` 进行卸载。
+
+---
+
+## 后续改进方向
+
+1. **自动化部署**：完善安装脚本
+2. **监控集成**：添加 Prometheus 监控
+3. **日志管理**：配置日志轮转
+4. **安全加固**：启用认证和加密
+5. **高可用**：配置集群模式
+
+---
+
+## 维护信息
+
+本文档随脚本集更新，如有问题请检查最新版本。

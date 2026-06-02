@@ -1,0 +1,11 @@
+# Python 配置文件
+# 软件标识
+SOFTWARE_NAME="python"
+SERVICE_NAME="python3"
+DISPLAY_NAME="Python"
+
+# 默认端口（多个用逗号分隔）
+DEFAULT_PORTS=""
+
+# 其他配置
+BACKUP_ROOT="/var/backups/shell-utils/${SOFTWARE_NAME}"

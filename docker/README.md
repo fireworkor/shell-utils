@@ -1,125 +1,141 @@
-# Docker 容器引擎
+# Docker 容器化平台
 
 ## 简介
-Docker 是一个开源的容器化平台，用于开发、部署和运行应用程序。
+Docker 是一个开源的应用容器引擎，让开发者可以打包他们的应用以及依赖包到一个可移植的镜像中。
 
-## 端口信息
-- Docker: 2375 (未加密) / 2376 (TLS加密)
-- Docker Registry: 5000
+---
 
-## 使用命令
+## 端口与组件
 
+### 默认端口
+
+| 端口 | 用途 | 说明 |
+|------|------|------|
+| 2375 | Docker API（非加密） | 不推荐生产 |
+| 2376 | Docker API（TLS） | 生产推荐 |
+| 9000 | Portainer（可选） | Web 管理界面 |
+
+### 主要组件
+
+- **dockerd** - Docker 守护进程
+- **docker** - 命令行客户端
+- **containerd** - 容器运行时
+- **runc** - 容器运行时
+- **docker-compose** - 多容器编排
+
+### 访问入口
+
+- **命令行**: `docker version`
+- **API**: `http://<IP>:2375` 或 `https://<IP>:2376`
+- **Web 管理**: Portainer（推荐）
+- **镜像仓库**: Docker Hub、私有仓库
+
+---
+
+## 首次安装后必做设置
+
+### 1. 验证安装
 ```bash
-# 安装 Docker
-bash docker.sh
-
-# 启动服务
-systemctl start docker
-systemctl enable docker
-
-# 查看版本
 docker --version
-docker-compose --version
-
-# 验证安装
-docker run hello-world
+docker compose version
 ```
 
-## 常用 Docker 命令
-
+### 2. 添加用户到 docker 组（免 sudo）
 ```bash
-# 镜像操作
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+### 3. 配置镜像加速器
+```bash
+sudo mkdir -p /etc/docker
+sudo tee /etc/docker/daemon.json << 'EOF'
+{
+    "registry-mirrors": [
+        "https://mirror.ccs.tencentyun.com",
+        "https://hub-mirror.c.163.com"
+    ]
+}
+EOF
+sudo systemctl restart docker
+```
+
+### 4. 配置防火墙
+```bash
+sudo firewall-cmd --permanent --add-port=2375/tcp
+sudo firewall-cmd --reload
+```
+
+### 5. 部署 Portainer
+```bash
+docker volume create portainer_data
+docker run -d -p 9000:9000 --name portainer     --restart=always     -v /var/run/docker.sock:/var/run/docker.sock     -v portainer_data:/data     portainer/portainer-ce:latest
+```
+访问: `http://<IP>:9000`
+
+### 6. 测试
+```bash
+docker run hello-world
+docker run -d -p 80:80 nginx
+```
+
+---
+
+## 详细使用说明
+
+### 镜像管理
+```bash
+docker search nginx
 docker pull nginx:latest
 docker images
-docker rmi nginx:latest
-docker build -t myapp .
-
-# 容器操作
-docker run -d --name nginx nginx:latest
-docker ps -a
-docker start nginx
-docker stop nginx
-docker restart nginx
-docker rm nginx
-docker logs -f nginx
-
-# 进入容器
-docker exec -it nginx bash
-
-# 查看资源使用
-docker stats
-docker system df
+docker rmi <image_id>
+docker image prune -a
 ```
 
-## 默认配置
-- 配置文件: `/etc/docker/daemon.json`
-- 数据目录: `/var/lib/docker/`
-- 日志配置: `/etc/docker/daemon.json`
-
-## 健康检查
-
+### 容器管理
 ```bash
-# 检查 Docker 服务
-systemctl status docker
-
-# 检查 Docker 版本
-docker version
-
-# 检查 Docker 信息
-docker info
-
-# 检查容器运行状态
+docker run -d --name web -p 80:80 nginx
+docker run -it ubuntu bash
 docker ps
-
-# 检查 Docker 存储驱动
-docker info | grep "Storage Driver"
+docker ps -a
+docker start web
+docker stop web
+docker restart web
+docker exec -it web bash
+docker logs web
+docker logs -f web
+docker rm web
 ```
 
-## 备份
+### Docker Compose
+参见 `docker-compose.yml` 示例配置章节。
 
-```bash
-# 备份 Docker 配置
-cp -r /etc/docker /backup/docker_config_$(date +%Y%m%d)
+---
 
-# 备份所有镜像
-docker save -o /backup/images_$(date +%Y%m%d).tar $(docker images -q)
+## 常见问题
 
-# 备份容器（需要先 commit 为镜像）
-docker commit nginx nginx_backup
-docker save nginx_backup | gzip > /backup/nginx_backup.tar.gz
-```
+### Q: 镜像拉取慢？
+A: 配置镜像加速器
 
-## 恢复
+### Q: 容器无法访问外网？
+A: 检查 DNS、iptables
 
-```bash
-# 恢复 Docker 配置
-cp -r /backup/docker_config_20240101/* /etc/docker/
+### Q: 磁盘空间不足？
+A: `docker system prune -a`
 
-# 恢复镜像
-docker load -i /backup/images_20240101.tar
+---
 
-# 恢复容器镜像
-gunzip < /backup/nginx_backup.tar.gz | docker load
-```
+## 后续改进方向
 
-## Docker Compose
+1. Docker Swarm（集群）
+2. Kubernetes（生产级编排）
+3. CI/CD 集成
+4. 镜像安全扫描（Trivy、Clair）
+5. 监控告警（cAdvisor + Prometheus）
+6. 私有仓库（Harbor）
 
-```bash
-# 启动服务
-docker-compose up -d
+---
 
-# 查看状态
-docker-compose ps
+## 维护信息
 
-# 查看日志
-docker-compose logs -f
-
-# 停止服务
-docker-compose down
-
-# 重新构建
-docker-compose up -d --build
-```
-
-## Web UI
-推荐使用 Portainer 或 DockStation。
+本文档随脚本集更新，如有问题请检查最新版本。

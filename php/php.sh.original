@@ -1,0 +1,96 @@
+#!/bin/bash
+# 描述：安装 PHP（支持多版本）
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -f "$SCRIPT_DIR/../lib/common.sh" ]; then
+    source "$SCRIPT_DIR/../lib/common.sh"
+fi
+
+install_php() {
+    local version=${1:-8.0}
+    check_root
+    check_os
+    local pkg_manager=$(get_pkg_manager)
+    
+    echo -e "${BLUE}正在安装 PHP $version...${NC}"
+    
+    # 尝试下载通用软件源
+    install_dependencies 2>/dev/null || true
+    
+    case $pkg_manager in
+        dnf)
+            # CentOS/RHEL 8+
+            dnf install -y epel-release 2>/dev/null || true
+            if ! rpm -q remi-release &>/dev/null; then
+                dnf install -y https://rpms.remirepo.net/enterprise/remi-release-${VER}.rpm 2>/dev/null || \
+                dnf install -y https://rpms.remirepo.net/enterprise/remi-release-8.rpm
+            fi
+            
+            # 先尝试 dnf 模块方式，失败则尝试直接安装
+            if dnf module list php &>/dev/null; then
+                dnf module reset php -y
+                dnf module enable php:remi-${version} -y
+            fi
+            
+            dnf install -y php php-fpm php-mysqlnd php-pdo php-mbstring \
+                php-xml php-gd php-curl php-zip php-intl php-bcmath php-opcache
+            ;;
+        yum)
+            # CentOS/RHEL 7
+            yum install -y epel-release 2>/dev/null || true
+            if ! rpm -q remi-release &>/dev/null; then
+                yum install -y https://rpms.remirepo.net/enterprise/remi-release-${VER}.rpm 2>/dev/null || \
+                yum install -y https://rpms.remirepo.net/enterprise/remi-release-7.rpm
+            fi
+            
+            # 只有CentOS 7+才可能有 yum module
+            if [ "$VER" -ge 7 ] && yum module list php &>/dev/null; then
+                yum module reset php -y
+                yum module enable php:remi-${version} -y
+            fi
+            
+            yum install -y php php-fpm php-mysqlnd php-pdo php-mbstring \
+                php-xml php-gd php-curl php-zip php-intl php-bcmath php-opcache
+            ;;
+        apt)
+            # Ubuntu/Debian
+            export DEBIAN_FRONTEND=noninteractive
+            apt update -y
+            
+            # 尝试安装 PPA 或者使用默认仓库
+            if [ "$VER" -ge 20 ] || [ ! -z "$(command -v add-apt-repository)" ]; then
+                apt install -y software-properties-common 2>/dev/null || true
+                add-apt-repository -y ppa:ondrej/php 2>/dev/null || true
+                apt update -y
+            fi
+            
+            # 尝试直接安装，失败则尝试简化版
+            apt install -y php${version} php${version}-fpm php${version}-mysql php${version}-mbstring \
+                php${version}-xml php${version}-gd php${version}-curl php${version}-zip php${version}-intl php${version}-bcmath php${version}-opcache 2>/dev/null || \
+            apt install -y php php-fpm php-mysql php-mbstring php-xml php-gd php-curl
+            ;;
+    esac
+    
+    # 安全启动 php-fpm
+    local php_fpm_service=$(systemctl list-unit-files | grep -E 'php.*fpm' | head -1 | awk '{print $1}')
+    if [ -z "$php_fpm_service" ]; then
+        echo -e "${YELLOW}未找到 php-fpm 服务，尝试启动...${NC}"
+        systemctl start php-fpm 2>/dev/null || true
+        systemctl enable php-fpm 2>/dev/null || true
+    else
+        start_service $php_fpm_service
+    fi
+    
+    print_success "PHP $version 安装完成"
+    echo ""
+    if command -v php &>/dev/null; then
+        echo "PHP 版本: $(php -v | head -1)"
+    fi
+    echo "配置目录可能在: /etc/php.ini 或 /etc/php/${version}/ 下"
+}
+
+# 直接运行
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    install_php "$@"
+fi

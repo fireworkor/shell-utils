@@ -1,0 +1,5 @@
+# Airflow 配置文件
+SOFTWARE_NAME="airflow"
+SERVICE_NAME="airflow"
+DISPLAY_NAME="Airflow"
+DEFAULT_PORTS="8080"

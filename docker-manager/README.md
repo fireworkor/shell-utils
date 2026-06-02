@@ -1,357 +1,126 @@
-# Docker 管理脚本
+# Docker Manager
 
-功能强大的 Docker 容器管理工具，支持安装、配置、镜像管理、容器管理、监控、日志、清理、备份恢复等操作。
+## 简介
+Docker 管理工具
 
-## 功能特性
+---
 
-### 📦 安装与配置
-- 自动检测操作系统并安装 Docker
-- 配置 Docker 镜像加速器
-- 安装 Docker Compose V2
-- 一键卸载
+## 端口与组件
 
-### 🖼️ 镜像管理
-- 拉取镜像
-- 列出镜像（支持表格/JSON格式）
-- 删除镜像
-- 批量清理未使用镜像
-- 备份/恢复所有镜像
+### 默认端口
 
-### 🐳 容器管理
-- 启动/停止/重启容器
-- 查看容器日志
-- 进入容器执行命令
-- 查看容器详细信息
-- 容器健康检查
-- 容器资源监控
+| 端口 | 用途 | 说明 |
+|------|------|------|
+| 9000 | 服务端口 | |
 
-### 📊 监控与日志
-- 实时容器资源监控
-- 查看容器日志
-- Docker 系统信息
-- 磁盘使用统计
+### 主要组件
 
-### 🧹 清理功能
-- 清理已停止容器
-- 清理未使用镜像
-- 清理未使用卷
-- 清理构建缓存
-- 完整清理
+- **docker-manager**: 主服务/组件
 
-### 💾 备份恢复
-- 备份单个容器
-- 恢复容器
-- 备份所有镜像
-- 恢复镜像
+### 访问入口
 
-### ⚡ 批量操作
-- 批量启动容器
-- 批量停止容器
-- 批量删除容器
+- **命令行**: `docker-manager`
+- **配置路径**: `/opt/docker-manager` 或 `/etc/docker-manager`
 
-### 🎼 Docker Compose
-- 启动/停止/重启 Compose
-- 查看日志
-- 查看服务状态
+---
 
-## 使用方法
+## 首次安装后必做设置
 
-### 基础命令
-
+### 1. 安装 Docker Manager
 ```bash
-# 安装 Docker
-sudo ./docker-manager.sh install
-
-# 查看 Docker 信息
-sudo ./docker-manager.sh info
-
-# 查看帮助
-./docker-manager.sh help
+cd docker-manager
+sudo bash install.sh
 ```
 
-### 镜像管理
-
+### 2. 查看软件信息
 ```bash
-# 拉取镜像
-sudo ./docker-manager.sh pull nginx:latest
-
-# 列出镜像
-sudo ./docker-manager.sh images
-
-# 删除镜像
-sudo ./docker-manager.sh rmi nginx:latest
-
-# 清理未使用镜像
-sudo ./docker-manager.sh clean-images
+bash info.sh
 ```
 
-### 容器管理
-
+### 3. 检查健康状态
 ```bash
-# 列出容器
-sudo ./docker-manager.sh ps
-
-# 列出所有容器（包括已停止）
-sudo ./docker-manager.sh ps all
-
-# 启动容器
-sudo ./docker-manager.sh start myapp
-
-# 停止容器
-sudo ./docker-manager.sh stop myapp
-
-# 重启容器
-sudo ./docker-manager.sh restart myapp
-
-# 删除容器
-sudo ./docker-manager.sh rm myapp
-
-# 强制删除容器
-sudo ./docker-manager.sh rm myapp -f
-
-# 查看容器日志
-sudo ./docker-manager.sh logs myapp 200
-
-# 实时查看日志
-sudo ./docker-manager.sh logs myapp 100 -f
-
-# 进入容器
-sudo ./docker-manager.sh exec myapp bash
-
-# 查看容器详情
-sudo ./docker-manager.sh inspect myapp
-
-# 容器健康检查
-sudo ./docker-manager.sh health myapp
-
-# 监控容器资源
-sudo ./docker-manager.sh monitor myapp
+bash healthcheck.sh
 ```
 
-### 批量操作
+---
 
+## 详细使用说明
+
+### 版本管理
 ```bash
-# 批量启动匹配的容器
-sudo ./docker-manager.sh batch-start myapp
-
-# 批量停止匹配的容器
-sudo ./docker-manager.sh batch-stop myapp
-
-# 批量删除匹配的容器
-sudo ./docker-manager.sh batch-rm myapp
+bash version.sh show
 ```
 
-### Docker Compose
-
+### 端口管理
 ```bash
-# 启动 Compose
-sudo ./docker-manager.sh compose-up docker-compose.yml
-
-# 停止 Compose
-sudo ./docker-manager.sh compose-down docker-compose.yml
-
-# 重启 Compose
-sudo ./docker-manager.sh compose-restart docker-compose.yml
-
-# 查看日志
-sudo ./docker-manager.sh compose-logs docker-compose.yml
-
-# 查看指定服务日志
-sudo ./docker-manager.sh compose-logs docker-compose.yml web 200
-
-# 查看服务状态
-sudo ./docker-manager.sh compose-ps docker-compose.yml
+bash port.sh show
 ```
 
-### 清理操作
-
+### 备份与恢复
 ```bash
-# 清理已停止容器
-sudo ./docker-manager.sh clean-containers
+# 完整备份
+bash backup.sh all
 
-# 清理未使用卷
-sudo ./docker-manager.sh clean-volumes
+# 查看备份列表
+bash backup.sh list
 
-# 完整清理
-sudo ./docker-manager.sh clean
+# 恢复备份
+bash restore.sh <备份文件>
 ```
 
-### 备份恢复
-
+### 服务管理
 ```bash
-# 备份容器
-sudo ./docker-manager.sh backup myapp /backups
+# 启动服务（如适用）
+sudo systemctl start docker-manager
 
-# 恢复容器
-sudo ./docker-manager.sh restore /backups/myapp_20240101_120000.tar new_container
-
-# 备份所有镜像
-sudo ./docker-manager.sh backup-images /backups
-
-# 恢复镜像
-sudo ./docker-manager.sh restore-images /backups/images_20240101_120000.tar
-```
-
-### 监控与信息
-
-```bash
-# 查看 Docker 信息
-sudo ./docker-manager.sh info
-
-# 查看系统信息
-sudo ./docker-manager.sh system-info
-
-# 查看磁盘使用
-sudo ./docker-manager.sh disk-usage
-
-# 实时监控所有容器
-sudo ./docker-manager.sh stats
-```
-
-## 常用场景
-
-### 部署 Web 应用
-
-```bash
-# 1. 拉取镜像
-sudo ./docker-manager.sh pull nginx:latest
-
-# 2. 运行容器
-docker run -d --name web -p 80:80 nginx:latest
-
-# 3. 查看状态
-sudo ./docker-manager.sh ps
-
-# 4. 查看日志
-sudo ./docker-manager.sh logs web 100
-```
-
-### 部署 MySQL
-
-```bash
-# 1. 拉取镜像
-sudo ./docker-manager.sh pull mysql:8.0
-
-# 2. 运行容器
-docker run -d --name mysql \
-  -e MYSQL_ROOT_PASSWORD=password \
-  -v mysql_data:/var/lib/mysql \
-  -p 3306:3306 \
-  mysql:8.0
-
-# 3. 健康检查
-sudo ./docker-manager.sh health mysql
-```
-
-### 使用 Docker Compose 部署 LNMP
-
-```bash
-# 创建 docker-compose.yml
-cat > docker-compose.yml << 'EOF'
-version: '3.8'
-services:
-  nginx:
-    image: nginx:latest
-    ports:
-      - "80:80"
-  php:
-    image: php:fpm
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: password
-EOF
-
-# 启动
-sudo ./docker-manager.sh compose-up
+# 停止服务
+sudo systemctl stop docker-manager
 
 # 查看状态
-sudo ./docker-manager.sh compose-ps
-
-# 查看日志
-sudo ./docker-manager.sh compose-logs
+sudo systemctl status docker-manager
 ```
 
-### 定期清理维护
-
+### 健康检查
 ```bash
-# 清理未使用资源
-sudo ./docker-manager.sh clean
-
-# 查看磁盘使用
-sudo ./docker-manager.sh disk-usage
-
-# 备份所有镜像
-sudo ./docker-manager.sh backup-images /backups
+bash healthcheck.sh
 ```
 
-## 注意事项
+---
 
-1. **权限要求**：大部分操作需要 root 权限
-2. **数据安全**：删除容器前请确保数据已备份
-3. **镜像加速**：脚本已内置多个镜像加速器
-4. **磁盘空间**：定期清理未使用资源
-5. **日志查看**：大量日志时使用行数限制
+## 配置与数据位置
 
-## 配置文件
+| 类型 | 路径 |
+|------|------|
+| 安装目录 | /opt/docker-manager |
+| 配置目录 | /etc/docker-manager |
+| 日志目录 | /var/log/docker-manager |
+| 数据目录 | /var/lib/docker-manager |
 
-Docker 配置文件位置：`/etc/docker/daemon.json`
+---
 
-```json
-{
-  "registry-mirrors": [
-    "https://docker.mirrors.ustc.edu.cn",
-    "https://hub-mirror.c.163.com",
-    "https://mirror.baidubce.com"
-  ],
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "10m",
-    "max-file": "3"
-  },
-  "storage-driver": "overlay2"
-}
-```
+## 常见问题
 
-## 故障排查
+### Q: 如何安装 Docker Manager？
+A: 运行 `bash install.sh` 或参考官方文档。
 
-### Docker 服务无法启动
+### Q: 服务无法启动？
+A: 查看日志文件 `/var/log/docker-manager` 中的错误信息。
 
-```bash
-# 查看服务状态
-systemctl status docker
+### Q: 如何完全卸载？
+A: 运行 `bash uninstall.sh` 进行卸载。
 
-# 查看日志
-journalctl -u docker -n 50
+---
 
-# 重启服务
-systemctl restart docker
-```
+## 后续改进方向
 
-### 容器无法访问网络
+1. **自动化部署**：完善安装脚本
+2. **监控集成**：添加 Prometheus 监控
+3. **日志管理**：配置日志轮转
+4. **安全加固**：启用认证和加密
+5. **高可用**：配置集群模式
 
-```bash
-# 检查 Docker 网络
-docker network ls
+---
 
-# 检查容器网络
-docker inspect myapp | grep -A 20 NetworkSettings
-```
+## 维护信息
 
-### 磁盘空间不足
-
-```bash
-# 查看磁盘使用
-sudo ./docker-manager.sh disk-usage
-
-# 清理
-sudo ./docker-manager.sh clean
-```
-
-## 贡献指南
-
-欢迎提交 Issue 和 Pull Request！
-
-## 许可证
-
-MIT License
+本文档随脚本集更新，如有问题请检查最新版本。

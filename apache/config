@@ -1,0 +1,11 @@
+# Apache 配置文件
+# 软件标识
+SOFTWARE_NAME="apache"
+SERVICE_NAME="httpd"
+DISPLAY_NAME="Apache"
+
+# 默认端口（多个用逗号分隔）
+DEFAULT_PORTS="80"
+
+# 其他配置
+BACKUP_ROOT="/var/backups/shell-utils/${SOFTWARE_NAME}"

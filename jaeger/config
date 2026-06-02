@@ -1,0 +1,5 @@
+# Jaeger 配置文件
+SOFTWARE_NAME="jaeger"
+SERVICE_NAME="jaeger"
+DISPLAY_NAME="Jaeger"
+DEFAULT_PORTS="16686,14268"

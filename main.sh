@@ -5,7 +5,8 @@
 # 支持 CentOS 7, CentOS 8, Ubuntu 18/20/22
 # =========================================
 
-set -e
+# 设置错误处理，但不使用 set -e，因为我们需要更好的控制
+set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

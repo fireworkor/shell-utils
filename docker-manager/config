@@ -1,0 +1,5 @@
+# Docker Manager 配置文件
+SOFTWARE_NAME="docker-manager"
+SERVICE_NAME="docker-manager"
+DISPLAY_NAME="Docker Manager"
+DEFAULT_PORTS="9000"

@@ -1,0 +1,5 @@
+# InfluxDB 配置文件
+SOFTWARE_NAME="influxdb"
+SERVICE_NAME="influxdb"
+DISPLAY_NAME="InfluxDB"
+DEFAULT_PORTS="8086"

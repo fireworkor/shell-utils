@@ -1,0 +1,11 @@
+# Nginx Deploy 配置文件
+# 软件标识
+SOFTWARE_NAME="nginx-deploy"
+SERVICE_NAME="nginx"
+DISPLAY_NAME="Nginx Deploy"
+
+# 默认端口（多个用逗号分隔）
+DEFAULT_PORTS="80"
+
+# 其他配置
+BACKUP_ROOT="/var/backups/shell-utils/${SOFTWARE_NAME}"

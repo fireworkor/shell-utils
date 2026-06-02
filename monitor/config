@@ -1,0 +1,5 @@
+# Monitor 配置文件
+SOFTWARE_NAME="monitor"
+SERVICE_NAME="monitor"
+DISPLAY_NAME="Monitor"
+DEFAULT_PORTS="3000,9090"

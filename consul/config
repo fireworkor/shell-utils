@@ -1,0 +1,5 @@
+# Consul 配置文件
+SOFTWARE_NAME="consul"
+SERVICE_NAME="consul"
+DISPLAY_NAME="Consul"
+DEFAULT_PORTS="8300,8500"

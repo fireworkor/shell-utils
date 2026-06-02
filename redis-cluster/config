@@ -1,0 +1,5 @@
+# Redis Cluster 配置文件
+SOFTWARE_NAME="redis-cluster"
+SERVICE_NAME="redis-cluster"
+DISPLAY_NAME="Redis Cluster"
+DEFAULT_PORTS="6379,16379"

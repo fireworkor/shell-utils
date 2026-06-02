@@ -1,0 +1,5 @@
+# ArgoCD 配置文件
+SOFTWARE_NAME="argocd"
+SERVICE_NAME="argocd"
+DISPLAY_NAME="ArgoCD"
+DEFAULT_PORTS="8080"

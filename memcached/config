@@ -1,0 +1,11 @@
+# Memcached 配置文件
+# 软件标识
+SOFTWARE_NAME="memcached"
+SERVICE_NAME="memcached"
+DISPLAY_NAME="Memcached"
+
+# 默认端口（多个用逗号分隔）
+DEFAULT_PORTS="11211"
+
+# 其他配置
+BACKUP_ROOT="/var/backups/shell-utils/${SOFTWARE_NAME}"

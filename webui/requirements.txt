@@ -1,0 +1,7 @@
+# Flask Web UI 依赖
+Flask>=2.0.0
+Flask-SocketIO>=5.0.0
+python-socketio>=5.0.0
+eventlet>=0.33.0
+psutil>=5.9.0
+

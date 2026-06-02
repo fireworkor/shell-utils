@@ -1,0 +1,110 @@
+#!/bin/bash
+# 描述：安装 Python（支持多版本）
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -f "$SCRIPT_DIR/../lib/common.sh" ]; then
+    source "$SCRIPT_DIR/../lib/common.sh"
+fi
+
+install_python() {
+    local version=${1:-3.11}
+    check_root
+    check_os
+    local pkg_manager=$(get_pkg_manager)
+    
+    echo -e "${BLUE}正在安装 Python $version...${NC}"
+    
+    # 先尝试通过包管理器安装，再考虑源码编译
+    case $pkg_manager in
+        dnf|yum)
+            # 先尝试从系统仓库或 EPEL 安装
+            install_dependencies 2>/dev/null || true
+            
+            # 尝试通过包管理器直接安装
+            if dnf install -y python${version} python${version}-devel python${version}-pip 2>/dev/null; then
+                print_success "已通过 dnf 安装 Python $version"
+            elif yum install -y python${version} python${version}-devel python${version}-pip 2>/dev/null; then
+                print_success "已通过 yum 安装 Python $version"
+            else
+                # 包管理器失败时，尝试源码编译
+                print_warning "包管理器安装失败，尝试从源码编译..."
+                
+                # 安装编译依赖
+                dnf install -y gcc openssl-devel bzip2-devel libffi-devel zlib-devel 2>/dev/null || \
+                yum install -y gcc openssl-devel bzip2-devel libffi-devel zlib-devel
+                
+                cd /tmp
+                
+                # 尝试获取最新的小版本
+                local full_version=""
+                if python --version 2>&1 | grep -q "Python" || python3 --version 2>&1 | grep -q "Python"; then
+                    # 尝试下载，失败则跳过
+                    wget -q --spider https://www.python.org/ftp/python/${version}/Python-${version}.tgz 2>/dev/null && \
+                    full_version=${version}
+                fi
+                
+                if [ -z "$full_version" ]; then
+                    # 尝试常见的小版本
+                    for patch in 0 1 2 3 4 5 6 7 8 9; do
+                        if wget -q --spider https://www.python.org/ftp/python/${version}.${patch}/Python-${version}.${patch}.tgz 2>/dev/null; then
+                            full_version="${version}.${patch}"
+                            break
+                        fi
+                    done
+                fi
+                
+                if [ -z "$full_version" ]; then
+                    print_error "无法找到 Python $version 的源码包，尝试安装默认版本..."
+                    ${pkg_manager} install -y python3 python3-devel python3-pip 2>/dev/null || true
+                else
+                    wget -q https://www.python.org/ftp/python/${full_version}/Python-${full_version}.tgz
+                    if [ -f Python-${full_version}.tgz ]; then
+                        tar xzf Python-${full_version}.tgz
+                        cd Python-${full_version}
+                        ./configure --enable-optimizations > /dev/null 2>&1
+                        make altinstall -j$(nproc) > /dev/null 2>&1
+                        cd ~
+                        rm -rf /tmp/Python-${full_version}*
+                    fi
+                fi
+            fi
+            ;;
+        apt)
+            export DEBIAN_FRONTEND=noninteractive
+            apt update -y
+            
+            # 尝试直接安装
+            if apt install -y python${version} python${version}-dev python${version}-venv python3-pip 2>/dev/null; then
+                print_success "已通过 apt 安装 Python $version"
+            else
+                # 尝试添加 deadsnakes PPA
+                apt install -y software-properties-common 2>/dev/null || true
+                add-apt-repository -y ppa:deadsnakes/ppa 2>/dev/null || true
+                apt update -y
+                
+                # 再试一次
+                apt install -y python${version} python${version}-dev python${version}-venv python3-pip 2>/dev/null || \
+                apt install -y python3 python3-dev python3-pip
+            fi
+            ;;
+    esac
+    
+    print_success "Python $version 安装完成"
+    echo ""
+    local python_cmd=""
+    if command -v python${version} &>/dev/null; then
+        python_cmd="python${version}"
+    elif command -v python3 &>/dev/null; then
+        python_cmd="python3"
+    else
+        python_cmd="python"
+    fi
+    if [ -n "$python_cmd" ] && $python_cmd --version &>/dev/null; then
+        echo "Python 版本: $($python_cmd --version)"
+    fi
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    install_python "$@"
+fi

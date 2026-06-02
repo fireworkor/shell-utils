@@ -1,0 +1,5 @@
+# Flink 配置文件
+SOFTWARE_NAME="flink"
+SERVICE_NAME="flink"
+DISPLAY_NAME="Flink"
+DEFAULT_PORTS="8081,6123"

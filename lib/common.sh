@@ -418,17 +418,35 @@ print_step() {
 check_prerequisites() {
     print_info "检查系统环境..."
     
-    if ! ping -c 1 8.8.8.8 &>/dev/null; then
+    # 网络检查 - 更稳健的方法
+    local has_network=false
+    if ping -c 1 -W 2 8.8.8.8 &>/dev/null; then
+        has_network=true
+    elif ping -c 1 -W 2 1.1.1.1 &>/dev/null; then
+        has_network=true
+    elif curl -s --connect-timeout 2 https://www.baidu.com &>/dev/null; then
+        has_network=true
+    fi
+    
+    if [ "$has_network" = false ]; then
         print_warning "网络连接不可用，部分功能可能受影响"
     fi
     
-    local available=$(df -BG / | tail -1 | awk '{print $4}' | sed 's/G//')
-    if [ "$available" -lt 2 ]; then
+    # 磁盘空间检查 - 兼容性更好
+    local available=$(df -BM / | tail -1 | awk '{print $4}' | sed 's/M//')
+    if [ -z "$available" ] || [ "$available" -lt 2048 ]; then
         print_warning "磁盘空间不足 2GB，建议清理磁盘"
     fi
     
-    local total_mem=$(free -m | awk 'NR==2 {print $2}')
-    if [ "$total_mem" -lt 1024 ]; then
+    # 内存检查 - 兼容性更好
+    local total_mem=""
+    if [ -f /proc/meminfo ]; then
+        total_mem=$(grep MemTotal /proc/meminfo | awk '{print $2}' | awk '{printf "%.0f", $1/1024}')
+    else
+        total_mem=$(free -m 2>/dev/null | awk 'NR==2 {print $2}' || echo 1024)
+    fi
+    
+    if [ -z "$total_mem" ] || [ "$total_mem" -lt 1024 ]; then
         print_warning "内存不足 1GB，部分软件可能运行不稳定"
     fi
     

@@ -1,0 +1,5 @@
+# Kafka Cluster 配置文件
+SOFTWARE_NAME="kafka-cluster"
+SERVICE_NAME="kafka-cluster"
+DISPLAY_NAME="Kafka Cluster"
+DEFAULT_PORTS="9092"

@@ -1,0 +1,5 @@
+# Vault 配置文件
+SOFTWARE_NAME="vault"
+SERVICE_NAME="vault"
+DISPLAY_NAME="Vault"
+DEFAULT_PORTS="8200"

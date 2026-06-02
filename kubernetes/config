@@ -1,0 +1,5 @@
+# Kubernetes 配置文件
+SOFTWARE_NAME="kubernetes"
+SERVICE_NAME="kubernetes"
+DISPLAY_NAME="Kubernetes"
+DEFAULT_PORTS="6443,10250"

@@ -1,144 +1,126 @@
-# 🛠️ 运维工具管理平台
+# WebUI
 
-基于 Flask 的可视化运维管理界面，提供一站式运维管理能力。
+## 简介
+Web 管理界面
 
-## ✨ 功能特性
+---
 
-### 📊 仪表盘
-- 实时监控 CPU、内存、磁盘使用率
-- 服务状态概览
-- 已安装软件列表
+## 端口与组件
 
-### 🖥️ 系统信息
-- 系统基本信息（主机名、内核版本、运行时间）
-- CPU 信息
-- 内存使用详情
-- 磁盘分区信息
-- 网络配置
-- 进程列表
+### 默认端口
 
-### ⚙️ 服务管理
-- Nginx、MySQL、Redis、Docker、SSH 服务控制
-- 启动/停止/重启操作
-- 实时状态显示
+| 端口 | 用途 | 说明 |
+|------|------|------|
+| 5000 | 服务端口 | |
 
-### 📦 软件管理
-- 查看可安装软件列表
-- 一键安装指定软件
-- 支持版本选择
-- 已安装软件版本显示
+### 主要组件
 
-### ✅ 健康检查
-- 一键运行健康检查
-- 显示详细检查结果
+- **webui**: 主服务/组件
 
-### 🔒 安全扫描
-- 系统安全基线检查
-- 多维度安全评估
+### 访问入口
 
-### 📋 日常巡检
-- 自动化日常巡检
-- 生成巡检报告
+- **命令行**: `webui`
+- **配置路径**: `/opt/webui` 或 `/etc/webui`
 
-### 💾 备份恢复
-- MySQL、MongoDB、Redis 备份
-- 支持全量备份
+---
 
-### 🔄 脚本升级
-- 检查更新
-- 自动升级
+## 首次安装后必做设置
 
-### 📝 日志查看
-- Nginx 日志
-- MySQL 日志
-- 系统日志
-
-## 🚀 快速开始
-
-### 环境要求
-- Python 3.6+
-- Flask 2.0+
-
-### 安装启动
-
+### 1. 安装 WebUI
 ```bash
-# 进入目录
 cd webui
+sudo bash install.sh
+```
 
-# 启动服务
-./start.sh
+### 2. 查看软件信息
+```bash
+bash info.sh
+```
+
+### 3. 检查健康状态
+```bash
+bash healthcheck.sh
+```
+
+---
+
+## 详细使用说明
+
+### 版本管理
+```bash
+bash version.sh show
+```
+
+### 端口管理
+```bash
+bash port.sh show
+```
+
+### 备份与恢复
+```bash
+# 完整备份
+bash backup.sh all
+
+# 查看备份列表
+bash backup.sh list
+
+# 恢复备份
+bash restore.sh <备份文件>
+```
+
+### 服务管理
+```bash
+# 启动服务（如适用）
+sudo systemctl start webui
 
 # 停止服务
-./stop.sh
+sudo systemctl stop webui
+
+# 查看状态
+sudo systemctl status webui
 ```
 
-### 访问地址
-
-启动后访问: **http://localhost:5000**
-
-## 📁 目录结构
-
-```
-webui/
-├── app.py              # Flask 应用主文件
-├── start.sh            # 启动脚本
-├── stop.sh             # 停止脚本
-├── templates/
-│   └── index.html      # Web 界面
-└── logs/               # 日志目录（自动创建）
+### 健康检查
+```bash
+bash healthcheck.sh
 ```
 
-## 📖 API 接口
+---
 
-| 接口 | 方法 | 说明 |
-|------|------|------|
-| `/api/system-info` | GET | 获取系统信息 |
-| `/api/services` | GET | 获取服务状态 |
-| `/api/cpu` | GET | 获取 CPU 信息 |
-| `/api/memory` | GET | 获取内存信息 |
-| `/api/disk` | GET | 获取磁盘信息 |
-| `/api/network` | GET | 获取网络信息 |
-| `/api/processes` | GET | 获取进程列表 |
-| `/api/software/list` | GET | 获取软件列表 |
-| `/api/software/install` | POST | 安装软件 |
-| `/api/software/status` | GET | 获取软件状态 |
-| `/api/healthcheck` | POST | 运行健康检查 |
-| `/api/security` | POST | 运行安全扫描 |
-| `/api/daily` | POST | 运行日常巡检 |
-| `/api/backup` | POST | 执行备份 |
-| `/api/update/check` | GET | 检查更新 |
-| `/api/service/control` | POST | 服务控制 |
-| `/api/logs/<service>` | GET | 获取日志 |
+## 配置与数据位置
 
-## 🔧 配置说明
+| 类型 | 路径 |
+|------|------|
+| 安装目录 | /opt/webui |
+| 配置目录 | /etc/webui |
+| 日志目录 | /var/log/webui |
+| 数据目录 | /var/lib/webui |
 
-### 端口配置
+---
 
-修改 `app.py` 中的端口配置：
+## 常见问题
 
-```python
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
-```
+### Q: 如何安装 WebUI？
+A: 运行 `bash install.sh` 或参考官方文档。
 
-### 安全密钥
+### Q: 服务无法启动？
+A: 查看日志文件 `/var/log/webui` 中的错误信息。
 
-修改 `app.py` 中的 SECRET_KEY：
+### Q: 如何完全卸载？
+A: 运行 `bash uninstall.sh` 进行卸载。
 
-```python
-app.config['SECRET_KEY'] = 'your-secret-key'
-```
+---
 
-## 📝 日志
+## 后续改进方向
 
-日志文件位于 `logs/webui.log`
+1. **自动化部署**：完善安装脚本
+2. **监控集成**：添加 Prometheus 监控
+3. **日志管理**：配置日志轮转
+4. **安全加固**：启用认证和加密
+5. **高可用**：配置集群模式
 
-## 📌 注意事项
+---
 
-1. 需要 root 权限才能执行某些操作（如服务控制）
-2. 建议在生产环境使用反向代理（如 Nginx）
-3. 建议配置 HTTPS
+## 维护信息
 
-## 📄 License
-
-MIT License
+本文档随脚本集更新，如有问题请检查最新版本。

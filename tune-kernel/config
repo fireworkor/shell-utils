@@ -1,0 +1,5 @@
+# Kernel Tuner 配置文件
+SOFTWARE_NAME="tune-kernel"
+SERVICE_NAME="tune-kernel"
+DISPLAY_NAME="Kernel Tuner"
+DEFAULT_PORTS=""

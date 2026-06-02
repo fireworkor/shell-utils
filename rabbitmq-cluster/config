@@ -1,0 +1,5 @@
+# RabbitMQ Cluster 配置文件
+SOFTWARE_NAME="rabbitmq-cluster"
+SERVICE_NAME="rabbitmq-cluster"
+DISPLAY_NAME="RabbitMQ Cluster"
+DEFAULT_PORTS="5672,15672"

@@ -1,0 +1,5 @@
+# Keepalived 配置文件
+SOFTWARE_NAME="keepalived"
+SERVICE_NAME="keepalived"
+DISPLAY_NAME="Keepalived"
+DEFAULT_PORTS="112"

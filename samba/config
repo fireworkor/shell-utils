@@ -1,0 +1,5 @@
+# Samba 配置文件
+SOFTWARE_NAME="samba"
+SERVICE_NAME="smbd"
+DISPLAY_NAME="Samba"
+DEFAULT_PORTS="139,445"

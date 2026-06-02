@@ -11,9 +11,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-CHECK_TYPE="${1:-all}"
 REPORT_DIR="security_reports_$(date +%Y%m%d)"
 EMAIL="${EMAIL:-}"
+DB_TYPE="${DB_TYPE:-}"
 
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $*"
@@ -31,7 +31,7 @@ show_help() {
     cat <<EOF
 ${GREEN}安全基线检查工具${NC}
 
-${YELLOW}使用方法:${NC} $0 <检查类型>
+${YELLOW}使用方法:${NC} $0 [选项] <检查类型...>
 
 ${BLUE}检查类型:${NC}
   all           - 执行所有安全检查
@@ -44,12 +44,14 @@ ${BLUE}检查类型:${NC}
 ${BLUE}选项:${NC}
   --report-dir  - 指定报告输出目录
   --email       - 发送报告到指定邮箱
+  --db-type     - 指定数据库类型 (mysql/postgresql/mongodb)
   --help        - 显示帮助信息
 
 ${BLUE}示例:${NC}
   $0 all                  # 执行所有检查
   $0 os database          # 执行系统和数据库检查
   $0 --report-dir ./reports all  # 指定报告目录
+  $0 --db-type mysql database  # 指定数据库类型检查
 
 EOF
 }
@@ -122,7 +124,7 @@ run_network_check() {
         bash "network/network_baseline.sh" | tee "$REPORT_DIR/network_check.log"
         log_success "网络安全检查完成"
     else
-        log_error "网络安全检查脚本不存在"
+        log_error "网络检查脚本不存在"
     fi
 }
 
@@ -194,7 +196,7 @@ send_email_report() {
 主机: $(hostname)
 时间: $(date '+%Y-%m-%d %H:%M:%S')
 
-检查类型: $CHECK_TYPE
+检查类型: $CHECK_TYPES
 
 报告详情请查看附件。
 
@@ -204,10 +206,10 @@ EOF
 )
     
     if command -v mutt &>/dev/null; then
-        echo "$body" | mutt -s "$subject" -a "$REPORT_DIR"/* "$EMAIL"
+        echo "$body" | mutt -s "$subject" -a "$REPORT_DIR"/* "$EMAIL" 2>/dev/null || true
         log_success "报告已发送"
     elif command -v mail &>/dev/null; then
-        echo "$body" | mail -s "$subject" -A "$REPORT_DIR" "$EMAIL"
+        echo "$body" | mail -s "$subject" -A "$REPORT_DIR" "$EMAIL" 2>/dev/null || true
         log_success "报告已发送"
     else
         log_error "未找到邮件客户端 (mutt 或 mail)"
@@ -216,17 +218,58 @@ EOF
 }
 
 main() {
-    if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
-        show_help
-        exit 0
+    local args=("$@")
+    local check_types=()
+    
+    # 解析参数
+    for ((i=0; i<${#args[@]}; i++)); do
+        case "${args[$i]}" in
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            --report-dir)
+                i=$((i+1))
+                if [ $i -lt ${#args[@]} ]; then
+                    REPORT_DIR="${args[$i]}"
+                fi
+                ;;
+            --email)
+                i=$((i+1))
+                if [ $i -lt ${#args[@]} ]; then
+                    EMAIL="${args[$i]}"
+                fi
+                ;;
+            --db-type)
+                i=$((i+1))
+                if [ $i -lt ${#args[@]} ]; then
+                    DB_TYPE="${args[$i]}"
+                fi
+                ;;
+            all|os|database|web|docker|network)
+                check_types+=("${args[$i]}")
+                ;;
+            *)
+                log_error "未知选项: ${args[$i]}"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+    
+    # 如果没有指定检查类型，默认执行所有检查
+    if [ ${#check_types[@]} -eq 0 ]; then
+        check_types=("all")
     fi
+    
+    CHECK_TYPES="${check_types[*]}"
     
     echo -e "${BLUE}========================================${NC}"
     echo -e "${BLUE}安全基线检查工具${NC}"
     echo -e "${BLUE}========================================${NC}"
     echo ""
     
-    log_info "检查类型: ${CHECK_TYPE:-all}"
+    log_info "检查类型: ${CHECK_TYPES:-all}"
     log_info "报告目录: $REPORT_DIR"
     echo ""
     
@@ -234,35 +277,33 @@ main() {
     
     cd "$(dirname "$0")" || exit 1
     
-    case "$CHECK_TYPE" in
-        all)
-            run_os_check
-            run_database_check
-            run_web_check
-            run_docker_check
-            run_network_check
-            ;;
-        os)
-            run_os_check
-            ;;
-        database)
-            run_database_check
-            ;;
-        web)
-            run_web_check
-            ;;
-        docker)
-            run_docker_check
-            ;;
-        network)
-            run_network_check
-            ;;
-        *)
-            log_error "未知检查类型: $CHECK_TYPE"
-            show_help
-            exit 1
-            ;;
-    esac
+    # 执行检查
+    for type in "${check_types[@]}"; do
+        case "$type" in
+            all)
+                run_os_check
+                run_database_check
+                run_web_check
+                run_docker_check
+                run_network_check
+                ;;
+            os)
+                run_os_check
+                ;;
+            database)
+                run_database_check
+                ;;
+            web)
+                run_web_check
+                ;;
+            docker)
+                run_docker_check
+                ;;
+            network)
+                run_network_check
+                ;;
+        esac
+    done
     
     generate_summary
     

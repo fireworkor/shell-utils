@@ -1,0 +1,5 @@
+# Ruby 配置文件
+SOFTWARE_NAME="ruby"
+SERVICE_NAME="ruby"
+DISPLAY_NAME="Ruby"
+DEFAULT_PORTS=""

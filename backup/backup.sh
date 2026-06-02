@@ -157,7 +157,10 @@ backup_configs() {
     [ -f /etc/redis/redis.conf ] && cp /etc/redis/redis.conf "$target_dir/redis.conf" && print_success "Redis 配置已备份"
     [ -f /etc/mongod.conf ] && cp /etc/mongod.conf "$target_dir/mongod.conf" && print_success "MongoDB 配置已备份"
     
-    tar czf "$target_dir/configs_$DATE.tar.gz" -C /workspace shell-utils 2>/dev/null || true
+    # 备份脚本目录本身
+    local script_parent_dir=$(dirname "$SCRIPT_DIR")
+    local script_base_name=$(basename "$SCRIPT_DIR")
+    tar czf "$target_dir/scripts_$DATE.tar.gz" -C "$script_parent_dir" "$script_base_name" 2>/dev/null || true
     
     print_step "3/3" "配置备份完成"
 }

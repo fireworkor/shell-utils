@@ -1,0 +1,5 @@
+# Hadoop 配置文件
+SOFTWARE_NAME="hadoop"
+SERVICE_NAME="hadoop"
+DISPLAY_NAME="Hadoop"
+DEFAULT_PORTS="8088,9000,50070"

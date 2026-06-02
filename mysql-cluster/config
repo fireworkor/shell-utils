@@ -1,0 +1,5 @@
+# MySQL Cluster 配置文件
+SOFTWARE_NAME="mysql-cluster"
+SERVICE_NAME="mysql-cluster"
+DISPLAY_NAME="MySQL Cluster"
+DEFAULT_PORTS="3306"
