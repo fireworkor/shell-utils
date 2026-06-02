@@ -25,9 +25,9 @@ echo ""
 echo -e "${BLUE}安装状态${NC}"
 if command -v ${SERVICE_NAME} &>/dev/null; then
     echo -e "  状态: ${GREEN}已安装${NC}"
-    local version=$(${SERVICE_NAME} --version 2>&1 | head -1 || echo "未知")
+    version=$(${SERVICE_NAME} --version 2>&1 | head -1 || echo "未知")
     echo "  版本: $version"
-    local path=$(which ${SERVICE_NAME})
+    path=$(which ${SERVICE_NAME})
     echo "  路径: $path"
 else
     echo -e "  状态: ${RED}未安装${NC}"
@@ -38,7 +38,7 @@ echo -e "${BLUE}服务状态${NC}"
 if command -v systemctl &>/dev/null; then
     if systemctl is-active --quiet "${SERVICE_NAME}" 2>/dev/null; then
         echo -e "  服务: ${GREEN}运行中${NC}"
-        local uptime=$(systemctl show "${SERVICE_NAME}" --property=ActiveEnterTimestamp 2>/dev/null | cut -d= -f2)
+        uptime=$(systemctl show "${SERVICE_NAME}" --property=ActiveEnterTimestamp 2>/dev/null | cut -d= -f2)
         echo "  启动时间: $uptime"
     else
         echo -e "  服务: ${RED}未运行${NC}"

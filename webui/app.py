@@ -15,6 +15,7 @@ import glob
 import configparser
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
+from flasgger import Swagger
 
 # 导入自定义模块
 from utils import (
@@ -83,6 +84,34 @@ WEBUI_CONFIG = load_config()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = WEBUI_CONFIG['secret_key']
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+
+# Swagger 配置
+swagger_config = {
+    "headers": [],
+    "specs": [
+        {
+            "endpoint": 'apispec',
+            "route": '/apispec.json',
+            "rule_filter": lambda rule: True,
+            "model_filter": lambda tag: True,
+        }
+    ],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/api/docs/"
+}
+
+swagger_template = {
+    "info": {
+        "title": "运维工具 Web UI API",
+        "description": "基于 Flask 和 Flask-SocketIO 的可视化管理平台 API",
+        "version": "1.0.0"
+    },
+    "basePath": "/",
+    "schemes": ["http", "https"]
+}
+
+swagger = Swagger(app, config=swagger_config, template=swagger_template)
 
 # 全局状态
 install_logs = {}

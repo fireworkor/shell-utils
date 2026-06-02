@@ -1,0 +1,17 @@
+# ShellCheck 配置文件
+# 禁用的规则:
+# SC2154: var is referenced but not assigned - 允许环境变量使用
+# SC1090: Can't follow non-constant source - 允许动态 source
+# SC1091: Not following source - 不检查 source 文件
+# SC2034: var appears unused - 允许声明未使用变量
+
+disable=SC2154,SC1090,SC1091,SC2034
+
+# 允许的外部工具
+external-sources=true
+
+# 目标 shell
+shell=bash
+
+# 颜色输出
+color=always

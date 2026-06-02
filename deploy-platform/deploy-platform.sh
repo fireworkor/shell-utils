@@ -70,7 +70,7 @@ list_deployments() {
     
     while IFS='=' read -r line; do
         [ -z "$line" ] && continue
-        [ "$line" = "#"* ] && continue
+        [[ "$line" = "#"* ]] && continue
         
         IFS=':' read -r name type replicas port image namespace status <<< "$line"
         

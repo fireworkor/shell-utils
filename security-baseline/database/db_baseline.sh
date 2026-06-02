@@ -129,11 +129,12 @@ check_postgresql() {
     log_info "PostgreSQL 版本: $(psql --version 2>/dev/null)"
     
     log_info "检查 1: pg_hba.conf 配置"
-    if [ -f /etc/postgresql/*/main/pg_hba.conf ] || [ -f /var/lib/pgsql/data/pg_hba.conf ]; then
-        local pg_hba=$(find /etc/postgresql -name pg_hba.conf 2>/dev/null | head -1)
-        if [ -z "$pg_hba" ]; then
-            pg_hba=$(find /var/lib -name pg_hba.conf 2>/dev/null | head -1)
-        fi
+    # 检查是否存在 pg_hba.conf 文件
+    pg_hba=$(find /etc/postgresql -name pg_hba.conf 2>/dev/null | head -1)
+    if [ -z "$pg_hba" ]; then
+        pg_hba=$(find /var/lib -name pg_hba.conf 2>/dev/null | head -1)
+    fi
+    if [ -n "$pg_hba" ]; then
         
         if [ -n "$pg_hba" ]; then
             local trust_conns=$(grep -v "^#" "$pg_hba" | grep "trust" | grep -v "local")

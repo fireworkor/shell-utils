@@ -9,13 +9,13 @@
 set -o pipefail
 
 # 全局变量
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-NC='\033[0m'
+RED=$(printf '\033[0;31m')
+GREEN=$(printf '\033[0;32m')
+YELLOW=$(printf '\033[1;33m')
+BLUE=$(printf '\033[0;34m')
+PURPLE=$(printf '\033[0;35m')
+CYAN=$(printf '\033[0;36m')
+NC=$(printf '\033[0m')
 
 # 错误码定义
 readonly E_SUCCESS=0
@@ -87,7 +87,7 @@ cleanup_handler() {
 }
 
 interrupt_handler() {
-    echo -e "\n${YELLOW}收到中断信号，正在清理...${NC}"
+    printf "\n${YELLOW}收到中断信号，正在清理...${NC}\n"
     cleanup_handler
     exit 130
 }
@@ -309,7 +309,7 @@ get_pkg_manager() {
 
 check_root() {
     if [ "$EUID" -ne 0 ]; then
-        echo -e "${RED}错误：请使用 root 用户运行此脚本${NC}"
+        printf "${RED}错误：请使用 root 用户运行此脚本${NC}\n"
         echo "使用方法: sudo $0"
         exit 1
     fi
@@ -318,15 +318,15 @@ check_root() {
 check_os() {
     detect_os
     if [ "$OS" = "unknown" ]; then
-        echo -e "${RED}错误：不支持的操作系统${NC}"
+        printf "${RED}错误：不支持的操作系统${NC}\n"
         exit 1
     fi
-    echo -e "${GREEN}检测到操作系统：${OS} ${VER}${NC}"
+    printf "${GREEN}检测到操作系统：${OS} ${VER}${NC}\n"
 }
 
 install_dependencies() {
     local pkg_manager=$(get_pkg_manager)
-    echo -e "${BLUE}安装基础依赖...${NC}"
+    printf "${BLUE}安装基础依赖...${NC}\n"
     
     case $pkg_manager in
         dnf|yum)
@@ -339,14 +339,14 @@ install_dependencies() {
             ;;
     esac
     
-    echo -e "${GREEN}✓ 基础依赖安装完成${NC}"
+    printf "${GREEN}✓ 基础依赖安装完成${NC}\n"
 }
 
 configure_firewall() {
     local port=$1
     local service=${2:-$port/tcp}
     
-    echo -e "${BLUE}配置防火墙：开放端口 $service${NC}"
+    printf "${BLUE}配置防火墙：开放端口 $service${NC}\n"
     
     case $OS in
         centos)
@@ -362,53 +362,53 @@ configure_firewall() {
             ;;
     esac
     
-    echo -e "${GREEN}✓ 防火墙配置完成${NC}"
+    printf "${GREEN}✓ 防火墙配置完成${NC}\n"
 }
 
 start_service() {
     local service=$1
     local enable=${2:-true}
     
-    echo -e "${BLUE}启动服务：$service${NC}"
+    printf "${BLUE}启动服务：$service${NC}\n"
     systemctl start $service
     if [ "$enable" = "true" ]; then
         systemctl enable $service
     fi
     
     if systemctl is-active $service &>/dev/null; then
-        echo -e "${GREEN}✓ 服务 $service 已启动${NC}"
+        printf "${GREEN}✓ 服务 $service 已启动${NC}\n"
     else
-        echo -e "${RED}✗ 服务 $service 启动失败${NC}"
+        printf "${RED}✗ 服务 $service 启动失败${NC}\n"
     fi
 }
 
 print_success() {
-    echo -e "${GREEN}✓ $1${NC}"
+    printf "${GREEN}✓ $1${NC}\n"
 }
 
 print_error() {
-    echo -e "${RED}✗ $1${NC}"
+    printf "${RED}✗ $1${NC}\n"
 }
 
 print_info() {
-    echo -e "${BLUE}ℹ $1${NC}"
+    printf "${BLUE}ℹ $1${NC}\n"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠ $1${NC}"
+    printf "${YELLOW}⚠ $1${NC}\n"
 }
 
 print_header() {
-    echo -e "\n${CYAN}========================================${NC}"
-    echo -e "${CYAN}$1${NC}"
-    echo -e "${CYAN}========================================${NC}\n"
+    printf "\n${CYAN}========================================${NC}\n"
+    printf "${CYAN}%s${NC}\n" "$1"
+    printf "\n${CYAN}========================================${NC}\n\n"
 }
 
 print_step() {
     local current=$1
     local total=$2
     local message=$3
-    echo -e "${YELLOW}[$current/$total]${NC} $message"
+    printf "${YELLOW}[$current/$total]${NC} $message\n"
 }
 
 # =========================================

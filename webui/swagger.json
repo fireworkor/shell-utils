@@ -1,0 +1,693 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "运维工具 Web UI API",
+    "description": "基于 Flask 和 Flask-SocketIO 的可视化管理平台 API",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Shell Utils Team"
+    }
+  },
+  "host": "localhost:5000",
+  "basePath": "/",
+  "schemes": ["http", "https"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "tags": [
+    {"name": "系统信息", "description": "系统信息相关接口"},
+    {"name": "软件管理", "description": "软件安装卸载管理"},
+    {"name": "健康检查", "description": "系统健康检查"},
+    {"name": "安全扫描", "description": "安全基线扫描"},
+    {"name": "备份恢复", "description": "数据备份和恢复"},
+    {"name": "日志管理", "description": "系统日志查看"},
+    {"name": "邮件预警", "description": "邮件预警配置"},
+    {"name": "更新管理", "description": "系统更新管理"},
+    {"name": "WebUI配置", "description": "WebUI自身配置"}
+  ],
+  "paths": {
+    "/api/system-info": {
+      "get": {
+        "tags": ["系统信息"],
+        "summary": "获取系统信息",
+        "description": "返回主机名、内核信息和运行时间",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean", "example": true},
+                "data": {"type": "string", "example": "主机名和系统信息..."}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services": {
+      "get": {
+        "tags": ["系统信息"],
+        "summary": "获取服务列表",
+        "description": "返回系统已启用的服务列表及状态",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {"type": "string"},
+                  "status": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cpu": {
+      "get": {
+        "tags": ["系统信息"],
+        "summary": "获取CPU信息",
+        "description": "返回CPU使用率和详细信息",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean"},
+                "data": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/memory": {
+      "get": {
+        "tags": ["系统信息"],
+        "summary": "获取内存信息",
+        "description": "返回内存使用情况",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean"},
+                "data": {"type": "string"},
+                "percent": {"type": "number"},
+                "total": {"type": "integer"},
+                "used": {"type": "integer"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/disk": {
+      "get": {
+        "tags": ["系统信息"],
+        "summary": "获取磁盘信息",
+        "description": "返回磁盘使用情况",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean"},
+                "data": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/network": {
+      "get": {
+        "tags": ["系统信息"],
+        "summary": "获取网络信息",
+        "description": "返回网络接口和监听端口信息",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean"},
+                "data": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/processes": {
+      "get": {
+        "tags": ["系统信息"],
+        "summary": "获取进程信息",
+        "description": "返回CPU和内存占用前20的进程",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean"},
+                "data": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/software/list": {
+      "get": {
+        "tags": ["软件管理"],
+        "summary": "获取软件列表",
+        "description": "返回所有可用软件的列表",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "/api/software/status": {
+      "get": {
+        "tags": ["软件管理"],
+        "summary": "获取软件安装状态",
+        "description": "返回所有软件的安装状态和版本信息",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {"type": "string"},
+                  "status": {"type": "string", "enum": ["installed", "not_installed"]},
+                  "version": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/software/info": {
+      "get": {
+        "tags": ["软件管理"],
+        "summary": "获取软件详细信息",
+        "description": "返回所有软件详细信息（端口、账号密码、配置路径等）",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {"type": "string"},
+                  "display_name": {"type": "string"},
+                  "ports": {"type": "string"},
+                  "username": {"type": "string"},
+                  "password": {"type": "string"},
+                  "config_path": {"type": "string"},
+                  "log_path": {"type": "string"},
+                  "description": {"type": "string"},
+                  "notes": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/software/info/{name}": {
+      "get": {
+        "tags": ["软件管理"],
+        "summary": "获取单个软件详细信息",
+        "parameters": [
+          {"name": "name", "in": "path", "required": true, "type": "string", "description": "软件名称"}
+        ],
+        "responses": {
+          "200": {"description": "成功"},
+          "404": {"description": "未找到"}
+        }
+      },
+      "put": {
+        "tags": ["软件管理"],
+        "summary": "更新软件信息",
+        "parameters": [
+          {"name": "name", "in": "path", "required": true, "type": "string"},
+          {"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}
+        ],
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      },
+      "delete": {
+        "tags": ["软件管理"],
+        "summary": "删除软件信息",
+        "parameters": [
+          {"name": "name", "in": "path", "required": true, "type": "string"}
+        ],
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/software/install": {
+      "post": {
+        "tags": ["软件管理"],
+        "summary": "安装软件",
+        "description": "异步安装软件，支持指定版本",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "software": {"type": "string", "example": "nginx"},
+                "version": {"type": "string", "example": ""}
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean"},
+                "task_id": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/software/uninstall": {
+      "post": {
+        "tags": ["软件管理"],
+        "summary": "卸载软件",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "software": {"type": "string", "example": "nginx"}
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/healthcheck": {
+      "post": {
+        "tags": ["健康检查"],
+        "summary": "执行健康检查",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "target": {"type": "string", "default": "all", "example": "nginx"}
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean"},
+                "output": {"type": "string"},
+                "error": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/healthcheck/options": {
+      "get": {
+        "tags": ["健康检查"],
+        "summary": "获取健康检查选项",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "value": {"type": "string"},
+                  "label": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/security": {
+      "post": {
+        "tags": ["安全扫描"],
+        "summary": "执行安全基线扫描",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "target": {"type": "string", "default": "all"}
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/daily": {
+      "post": {
+        "tags": ["健康检查"],
+        "summary": "执行日常巡检",
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/backup": {
+      "post": {
+        "tags": ["备份恢复"],
+        "summary": "执行备份",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "target": {"type": "string", "default": "all"}
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/restore": {
+      "post": {
+        "tags": ["备份恢复"],
+        "summary": "执行恢复",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "target": {"type": "string"},
+                "backup_file": {"type": "string"}
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/backup/list": {
+      "get": {
+        "tags": ["备份恢复"],
+        "summary": "获取备份列表",
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/logs/list": {
+      "get": {
+        "tags": ["日志管理"],
+        "summary": "获取日志服务列表",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "/api/logs/{service}": {
+      "get": {
+        "tags": ["日志管理"],
+        "summary": "获取服务日志",
+        "parameters": [
+          {"name": "service", "in": "path", "required": true, "type": "string"}
+        ],
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/alert/config": {
+      "get": {
+        "tags": ["邮件预警"],
+        "summary": "获取邮件预警配置",
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      },
+      "post": {
+        "tags": ["邮件预警"],
+        "summary": "保存邮件预警配置",
+        "parameters": [
+          {"name": "body", "in": "body", "schema": {"type": "object"}}
+        ],
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/alert/rules": {
+      "get": {
+        "tags": ["邮件预警"],
+        "summary": "获取预警规则",
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      },
+      "post": {
+        "tags": ["邮件预警"],
+        "summary": "保存预警规则",
+        "parameters": [
+          {"name": "body", "in": "body", "schema": {"type": "object"}}
+        ],
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/alert/test": {
+      "post": {
+        "tags": ["邮件预警"],
+        "summary": "发送测试邮件",
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/update/check": {
+      "get": {
+        "tags": ["更新管理"],
+        "summary": "检查更新",
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/update/run": {
+      "post": {
+        "tags": ["更新管理"],
+        "summary": "执行更新",
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/service/control": {
+      "post": {
+        "tags": ["系统信息"],
+        "summary": "服务控制",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "action": {"type": "string", "enum": ["start", "stop", "restart", "status"]},
+                "service": {"type": "string"}
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/webui/config": {
+      "get": {
+        "tags": ["WebUI配置"],
+        "summary": "获取WebUI配置",
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      },
+      "post": {
+        "tags": ["WebUI配置"],
+        "summary": "更新WebUI配置",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+                "host": {"type": "string"},
+                "debug": {"type": "boolean"}
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/webui/restart": {
+      "post": {
+        "tags": ["WebUI配置"],
+        "summary": "重启WebUI",
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/system/health": {
+      "get": {
+        "tags": ["系统信息"],
+        "summary": "获取系统健康状态",
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/cleanup/logs": {
+      "post": {
+        "tags": ["系统信息"],
+        "summary": "清理旧日志",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "max_age_days": {"type": "integer", "default": 7},
+                "max_size_mb": {"type": "integer", "default": 100}
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/cleanup/gc": {
+      "post": {
+        "tags": ["系统信息"],
+        "summary": "强制垃圾回收",
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/cleanup/temp": {
+      "post": {
+        "tags": ["系统信息"],
+        "summary": "清理临时文件",
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/cleanup/full": {
+      "post": {
+        "tags": ["系统信息"],
+        "summary": "执行完整清理",
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    },
+    "/api/system/disk-check": {
+      "get": {
+        "tags": ["系统信息"],
+        "summary": "检查磁盘空间",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "threshold": {"type": "integer", "default": 90}
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {"description": "成功"}
+        }
+      }
+    }
+  }
+}

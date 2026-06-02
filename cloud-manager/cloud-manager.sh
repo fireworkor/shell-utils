@@ -84,7 +84,7 @@ list_accounts() {
     
     while IFS='=' read -r name type credentials; do
         [ -z "$name" ] && continue
-        [ "$name" = "#"* ] && continue
+        [[ "$name" = "#"* ]] && continue
         
         local is_default=""
         if [ "$name" = "$default_account" ]; then
@@ -382,7 +382,7 @@ list_all_instances() {
     
     while IFS='=' read -r line; do
         [ -z "$line" ] && continue
-        [ "$line" = "#"* ] && continue
+        [[ "$line" = "#"* ]] && continue
         
         IFS=':' read -r name type access_key secret region <<< "$line"
         
@@ -425,7 +425,7 @@ show_all_costs() {
     
     while IFS='=' read -r line; do
         [ -z "$line" ] && continue
-        [ "$line" = "#"* ] && continue
+        [[ "$line" = "#"* ]] && continue
         
         IFS=':' read -r name type access_key secret region <<< "$line"
         

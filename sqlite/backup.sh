@@ -1,4 +1,7 @@
 #!/bin/bash
+
+shopt -s nullglob
+
 # SQLite 备份脚本
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,13 +25,14 @@ do_backup() {
     if [ -z "$db_file" ]; then
         echo "备份所有 SQLite 数据库..."
         # 备份 /var/lib/sqlite 下的所有数据库
-        for db in /var/lib/sqlite/*.db /var/lib/sqlite/*.sqlite3 2>/dev/null; do
+        # 使用 find 命令来查找文件
+        while IFS= read -r -d '' db; do
             [ -f "$db" ] || continue
             local db_name=$(basename "$db")
             local backup_file="$BACKUP_ROOT/${db_name}_${TIMESTAMP}.db"
             sqlite3 "$db" ".backup '$backup_file'"
             echo -e "${GREEN}已备份: $db_name -> ${db_name}_${TIMESTAMP}.db${NC}"
-        done
+        done < <(find /var/lib/sqlite -name "*.db" -o -name "*.sqlite3" -type f -print0 2>/dev/null)
     else
         if [ ! -f "$db_file" ]; then
             echo -e "${RED}数据库文件不存在: $db_file${NC}"

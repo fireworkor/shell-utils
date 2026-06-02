@@ -24,7 +24,7 @@ fi
 # 检查数据目录
 if [ -d "/var/lib/sqlite" ]; then
     echo -e "${GREEN}✓ 数据目录存在${NC}"
-    local db_count=$(ls /var/lib/sqlite/*.db /var/lib/sqlite/*.sqlite3 2>/dev/null | wc -l)
+    db_count=$(ls /var/lib/sqlite/*.db /var/lib/sqlite/*.sqlite3 2>/dev/null | wc -l)
     echo "  数据库文件数量: $db_count"
 else
     echo -e "${YELLOW}⚠ 数据目录不存在${NC}"
@@ -32,7 +32,7 @@ fi
 
 # 测试基本功能
 if command -v sqlite3 &>/dev/null; then
-    local test_result=$(sqlite3 :memory: "SELECT 1+1;" 2>/dev/null)
+    test_result=$(sqlite3 :memory: "SELECT 1+1;" 2>/dev/null)
     if [ "$test_result" = "2" ]; then
         echo -e "${GREEN}✓ 基本功能正常${NC}"
     else

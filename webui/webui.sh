@@ -48,12 +48,12 @@ if [ -f "$LIB_DIR/common.sh" ]; then
 fi
 
 # 颜色定义
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+RED=$(printf '\033[0;31m')
+GREEN=$(printf '\033[0;32m')
+YELLOW=$(printf '\033[1;33m')
+BLUE=$(printf '\033[0;34m')
+CYAN=$(printf '\033[0;36m')
+NC=$(printf '\033[0m') # No Color
 
 # 日志函数
 log_info() {
@@ -284,16 +284,27 @@ start() {
     # 检查是否已在运行
     local current_pid=$(get_valid_pid)
     if [ -n "$current_pid" ]; then
-        log_warning "服务已在运行 (PID: $current_pid)"
-        return 1
+        log_warning "服务已在运行 (PID: $current_pid)，正在停止..."
+        stop
+        sleep 2
     fi
     
-    # 检查端口是否被其他进程占用
+    # 检查端口是否被占用（包括其他进程）
     if check_port $PORT; then
         local port_pid=$(get_port_pid $PORT)
-        if [ -n "$port_pid" ] && ! is_valid_pid "$port_pid"; then
-            log_error "端口 $PORT 已被其他进程占用 (PID: $port_pid)"
-            return 1
+        if [ -n "$port_pid" ]; then
+            log_warning "端口 $PORT 已被占用 (PID: $port_pid)，正在停止..."
+            # 尝试停止占用端口的进程
+            if kill -0 $port_pid 2>/dev/null; then
+                kill $port_pid 2>/dev/null
+                sleep 2
+                # 如果还在运行，强制杀死
+                if kill -0 $port_pid 2>/dev/null; then
+                    log_warning "进程未响应，强制停止..."
+                    kill -9 $port_pid 2>/dev/null
+                    sleep 1
+                fi
+            fi
         fi
     fi
     

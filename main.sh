@@ -224,9 +224,9 @@ list_scripts() {
                 
                 if check_installed "$name"; then
                     version=$(get_installed_version "$name")
-                    echo -e "${GREEN}$name${NC} - $desc ${YELLOW}[已安装: $version]${NC}"
+                    printf "${GREEN}%s${NC} - $desc ${YELLOW}[已安装: $version]${NC}\n" "$name"
                 else
-                    echo -e "${GREEN}$name${NC} - $desc"
+                    printf "${GREEN}%s${NC} - $desc\n" "$name"
                 fi
             fi
         fi
@@ -257,7 +257,7 @@ show_status() {
         "go:go"
     )
     
-    echo -e "${YELLOW}软件名称          状态          版本${NC}"
+    printf "${YELLOW}软件名称          状态          版本${NC}\n"
     echo "----------------------------------------"
     
     for item in "${software_list[@]}"; do

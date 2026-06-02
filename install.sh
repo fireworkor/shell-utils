@@ -42,7 +42,7 @@ VER=$(echo $detect_os_result | awk '{print $2}')
 check_root() {
     if [ "$EUID" -ne 0 ]; then
         echo -e "${RED}错误：请使用 root 用户运行此脚本${NC}"
-        echo "使用方法: sudo $0 $@"
+        echo "使用方法: sudo $0 $*"
         exit 1
     fi
 }
