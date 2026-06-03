@@ -22,6 +22,11 @@ if [ -f "$SCRIPT_DIR/lib/config.sh" ]; then
     source "$SCRIPT_DIR/lib/config.sh"
 fi
 
+# 加载插件管理器
+if [ -f "$SCRIPT_DIR/lib/plugin-manager.sh" ]; then
+    source "$SCRIPT_DIR/lib/plugin-manager.sh"
+fi
+
 show_help() {
     cat << EOF
 ${GREEN}========================================${NC}
@@ -192,6 +197,19 @@ ${YELLOW}PVE虚拟机部署：${NC}
                         docker, nodejs, python, java, postgresql, 
                         mongodb, elasticsearch, kubernetes
 
+${YELLOW}插件管理 (v3.0):${NC}
+  plugin discover           发现所有可用插件
+  plugin list [分类]        列出所有插件
+  plugin search <关键词>    搜索插件
+  plugin install <名称>     安装插件
+  plugin uninstall <名称>   卸载插件
+  plugin enable <名称>       启用插件
+  plugin disable <名称>      禁用插件
+  plugin info <名称>        显示插件详情
+  plugin status            显示插件状态
+  plugin market            浏览插件市场
+  plugin diagnose           诊断插件系统
+
 ${YELLOW}交互式菜单：${NC}
   menu             启动交互式安装菜单
   menu <host> <user> <password> [port]  远程部署
@@ -279,7 +297,51 @@ install_software() {
     
     log_info "开始安装 $software${version:+ ($version)}"
     
-    local script_file="$SCRIPT_DIR/${software}/${software}.sh"
+    # 首先检查是否是内置插件
+    if [ -d "$PLUGIN_DIR/$software" ] || [ -d "$CUSTOM_PLUGIN_DIR/$software" ]; then
+        print_header "使用插件系统安装 $software${version:+ ($version)}"
+        
+        # 初始化插件管理器（如果需要）
+        if [ -z "${#PLUGIN_METADATA[@]}" ]; then
+            discover_plugins
+        fi
+        
+        # 注册插件
+        local plugin_path="$PLUGIN_DIR/$software"
+        if [ ! -d "$plugin_path" ]; then
+            plugin_path="$CUSTOM_PLUGIN_DIR/$software"
+        fi
+        
+        if [ -d "$plugin_path" ]; then
+            register_plugin "$software" "$plugin_path"
+            
+            # 检查依赖
+            if check_plugin_dependencies "$software"; then
+                plugin_install "$software" "false"
+                local status=$?
+                if [ $status -eq 0 ]; then
+                    log_info "插件安装成功: $software${version:+ ($version)}"
+                    print_success "$software 安装完成"
+                else
+                    log_error "插件安装失败: $software${version:+ ($version)}"
+                    print_error "$software 安装失败"
+                fi
+                return $status
+            else
+                print_error "$software 依赖检查失败"
+                return 1
+            fi
+        fi
+    fi
+    
+    # 回退到传统脚本安装方式
+    # 首先尝试使用新的标准脚本 install.sh
+    local script_file="$SCRIPT_DIR/${software}/install.sh"
+    
+    # 如果找不到标准脚本，再尝试旧的格式
+    if [ ! -f "$script_file" ]; then
+        script_file="$SCRIPT_DIR/${software}/${software}.sh"
+    fi
     
     if [ ! -f "$script_file" ]; then
         print_error "未找到脚本: $script_file"
@@ -712,6 +774,9 @@ main() {
             ;;
         menu)
             bash "$SCRIPT_DIR/menu.sh" "$@"
+            ;;
+        plugin)
+            plugin_main "$@"
             ;;
         *)
             print_error "未知命令: $command"

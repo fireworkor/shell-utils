@@ -730,7 +730,13 @@ execute_install() {
         echo "🌍 远程部署到: $REMOTE_USER@$REMOTE_HOST:$REMOTE_PORT"
         echo ""
         
-        local script_path="$SCRIPT_DIR/${software}/${software}.sh"
+        # 首先尝试使用新的标准脚本 install.sh
+        local script_path="$SCRIPT_DIR/${software}/install.sh"
+        
+        # 如果找不到标准脚本，再尝试旧的格式
+        if [ ! -f "$script_path" ]; then
+            script_path="$SCRIPT_DIR/${software}/${software}.sh"
+        fi
         
         if [ -f "$script_path" ]; then
             remote_exec_script "$script_path" "$options"

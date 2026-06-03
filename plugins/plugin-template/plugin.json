@@ -1,0 +1,41 @@
+{
+  "name": "example-plugin",
+  "version": "1.0.0",
+  "description": "示例插件 - 展示标准插件结构",
+  "author": "Shell Utils Team",
+  "category": "example",
+  "license": "MIT",
+  "homepage": "https://github.com/fireworkor/shell-utils",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fireworkor/shell-utils"
+  },
+  "keywords": ["example", "template", "demo"],
+  "platform": ["centos", "ubuntu"],
+  "dependencies": [],
+  "hooks": {
+    "pre_install": true,
+    "post_install": true,
+    "pre_uninstall": true,
+    "post_uninstall": true
+  },
+  "scripts": {
+    "install": "./install.sh",
+    "uninstall": "./uninstall.sh",
+    "config": "./config.sh",
+    "healthcheck": "./healthcheck.sh"
+  },
+  "config_files": [],
+  "service_files": [],
+  "requirements": {
+    "os": ["centos7", "centos8", "ubuntu18", "ubuntu20", "ubuntu22"],
+    "disk_space": "100M",
+    "memory": "256M",
+    "root": true
+  },
+  "metadata": {
+    "created": "2024-01-01",
+    "updated": "2024-01-01",
+    "tested": "2024-01-01"
+  }
+}

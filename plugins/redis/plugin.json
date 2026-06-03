@@ -1,0 +1,46 @@
+{
+  "name": "redis",
+  "version": "1.0.0",
+  "description": "Redis 内存数据库 - 高性能键值存储，支持字符串、哈希、列表、集合、有序集合",
+  "author": "Shell Utils Team",
+  "category": "database",
+  "license": "BSD-3-Clause",
+  "homepage": "https://redis.io",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fireworkor/shell-utils"
+  },
+  "keywords": ["redis", "database", "cache", "key-value", "nosql"],
+  "platform": ["centos7", "centos8", "ubuntu18", "ubuntu20", "ubuntu22"],
+  "dependencies": [],
+  "hooks": {
+    "pre_install": true,
+    "post_install": true,
+    "pre_uninstall": true,
+    "post_uninstall": true
+  },
+  "scripts": {
+    "install": "./install.sh",
+    "uninstall": "./uninstall.sh",
+    "config": "./config.sh",
+    "healthcheck": "./healthcheck.sh"
+  },
+  "config_files": [
+    "/etc/redis/redis.conf",
+    "/etc/redis/sentinel.conf"
+  ],
+  "service_files": [
+    "/usr/lib/systemd/system/redis.service"
+  ],
+  "requirements": {
+    "os": ["centos7", "centos8", "ubuntu18", "ubuntu20", "ubuntu22"],
+    "disk_space": "100M",
+    "memory": "1G",
+    "root": true
+  },
+  "metadata": {
+    "created": "2024-01-01",
+    "updated": "2024-01-15",
+    "tested": "2024-01-15"
+  }
+}

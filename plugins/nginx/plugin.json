@@ -1,0 +1,46 @@
+{
+  "name": "nginx",
+  "version": "1.0.0",
+  "description": "Nginx HTTP 服务器 - 高性能 Web 服务器，支持 HTTP/HTTPS、反向代理、负载均衡",
+  "author": "Shell Utils Team",
+  "category": "webserver",
+  "license": "BSD-2-Clause",
+  "homepage": "https://nginx.org",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fireworkor/shell-utils"
+  },
+  "keywords": ["nginx", "webserver", "http", "https", "reverse-proxy", "load-balancer"],
+  "platform": ["centos7", "centos8", "ubuntu18", "ubuntu20", "ubuntu22"],
+  "dependencies": [],
+  "hooks": {
+    "pre_install": true,
+    "post_install": true,
+    "pre_uninstall": true,
+    "post_uninstall": true
+  },
+  "scripts": {
+    "install": "./install.sh",
+    "uninstall": "./uninstall.sh",
+    "config": "./config.sh",
+    "healthcheck": "./healthcheck.sh"
+  },
+  "config_files": [
+    "/etc/nginx/nginx.conf",
+    "/etc/nginx/conf.d/default.conf"
+  ],
+  "service_files": [
+    "/usr/lib/systemd/system/nginx.service"
+  ],
+  "requirements": {
+    "os": ["centos7", "centos8", "ubuntu18", "ubuntu20", "ubuntu22"],
+    "disk_space": "100M",
+    "memory": "512M",
+    "root": true
+  },
+  "metadata": {
+    "created": "2024-01-01",
+    "updated": "2024-01-15",
+    "tested": "2024-01-15"
+  }
+}
