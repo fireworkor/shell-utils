@@ -32,6 +32,7 @@ declare -A ERROR_MESSAGES=(
 # 全局变量
 ERROR_COUNT=0
 WARN_COUNT=0
+SCRIPT_START_TIME=0
 SCRIPT_START_TIME=$(date +%s)
 
 # 设置错误处理
@@ -70,7 +71,8 @@ error_handler() {
 # 退出处理器
 cleanup_handler() {
     local exit_code=$?
-    local duration=$(($(date +%s) - SCRIPT_START_TIME))
+    local duration
+    duration=$(($(date +%s) - SCRIPT_START_TIME))
 
     if [ $# -gt 0 ]; then
         exit_code=$1
@@ -105,7 +107,7 @@ restore_error_handling() {
 run_command() {
     local description="$1"
     shift
-    local cmd="$@"
+    local cmd="$*"
 
     log_info "执行: $description"
     log_debug "命令: $cmd"
@@ -134,7 +136,7 @@ run_command() {
 safe_run() {
     local description="$1"
     shift
-    local cmd="$@"
+    local cmd="$*"
 
     log_debug "安全执行: $description"
 
