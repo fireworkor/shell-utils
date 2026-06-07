@@ -245,12 +245,11 @@ backup_config() {
     
     init_config_dir
     
-    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local timestamp
+    timestamp=$(date +%Y%m%d_%H%M%S)
     local backup_file="$BACKUP_DIR/config_$timestamp.conf"
     
-    cp "$CONFIG_FILE" "$backup_file"
-    
-    if [ $? -eq 0 ]; then
+    if cp "$CONFIG_FILE" "$backup_file"; then
         echo -e "${GREEN}✓ 配置已备份: $backup_file${NC}"
         
         # 清理旧备份
@@ -270,11 +269,13 @@ cleanup_old_backups() {
     fi
     
     local max_age="${CONFIG_MAX_BACKUP_AGE_DAYS:-30}"
-    local count_before=$(find "$BACKUP_DIR" -name "config_*.conf" | wc -l)
+    local count_before
+    count_before=$(find "$BACKUP_DIR" -name "config_*.conf" | wc -l)
     
     find "$BACKUP_DIR" -name "config_*.conf" -mtime "+$max_age" -delete 2>/dev/null
     
-    local count_after=$(find "$BACKUP_DIR" -name "config_*.conf" | wc -l)
+    local count_after
+    count_after=$(find "$BACKUP_DIR" -name "config_*.conf" | wc -l)
     local deleted=$((count_before - count_after))
     
     if [ $deleted -gt 0 ]; then
@@ -289,7 +290,8 @@ list_backups() {
         return 1
     fi
     
-    local backups=($(find "$BACKUP_DIR" -name "config_*.conf" -type f | sort -r))
+    local backups
+    mapfile -t backups < <(find "$BACKUP_DIR" -name "config_*.conf" -type f | sort -r)
     
     if [ ${#backups[@]} -eq 0 ]; then
         echo -e "${YELLOW}没有配置备份${NC}"
@@ -301,8 +303,10 @@ list_backups() {
     
     for i in "${!backups[@]}"; do
         local backup="${backups[$i]}"
-        local size=$(du -h "$backup" | cut -f1)
-        local date=$(date -r "$backup" '+%Y-%m-%d %H:%M:%S')
+        local size
+        size=$(du -h "$backup" | cut -f1)
+        local date
+        date=$(date -r "$backup" '+%Y-%m-%d %H:%M:%S')
         
         echo -e "  ${GREEN}$((i+1))${NC}. $(basename "$backup")"
         echo -e "      大小: $size | 日期: $date"
@@ -330,9 +334,7 @@ restore_config() {
     backup_config
     
     # 恢复配置
-    cp "$backup_file" "$CONFIG_FILE"
-    
-    if [ $? -eq 0 ]; then
+    if cp "$backup_file" "$CONFIG_FILE"; then
         echo -e "${GREEN}✓ 配置已恢复: $CONFIG_FILE${NC}"
         echo -e "${BLUE}重新加载配置...${NC}"
         load_config
