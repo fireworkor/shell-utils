@@ -69,9 +69,10 @@ check_system_info() {
     log_info "运行时间: $(uptime -p)"
     log_info "系统负载: $(uptime | awk '{print $10 $11 $12}')"
     
-    local cpu_cores=$(nproc)
-    local mem_total=$(free -h | grep Mem | awk '{print $2}')
-    local disk_total=$(df -h / | grep / | awk '{print $2}')
+    local cpu_cores mem_total disk_total
+    cpu_cores=$(nproc)
+    mem_total=$(free -h | grep Mem | awk '{print $2}')
+    disk_total=$(df -h / | grep / | awk '{print $2}')
     
     log_info "CPU 核心: $cpu_cores"
     log_info "内存总量: $mem_total"
@@ -83,7 +84,8 @@ check_system_info() {
 check_cpu_usage() {
     log_section "CPU 使用情况"
     
-    local cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
+    local cpu_usage
+    cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
     cpu_usage=$(printf "%.1f" "$cpu_usage")
     
     log_info "CPU 使用率: ${cpu_usage}%"
@@ -106,10 +108,11 @@ check_cpu_usage() {
 check_memory_usage() {
     log_section "内存使用情况"
     
-    local mem_info=$(free -m | grep Mem)
-    local mem_total=$(echo "$mem_info" | awk '{print $2}')
-    local mem_used=$(echo "$mem_info" | awk '{print $3}')
-    local mem_usage=$(echo "scale=2; $mem_used / $mem_total * 100" | bc)
+    local mem_info mem_total mem_used mem_usage
+    mem_info=$(free -m | grep Mem)
+    mem_total=$(echo "$mem_info" | awk '{print $2}')
+    mem_used=$(echo "$mem_info" | awk '{print $3}')
+    mem_usage=$(echo "scale=2; $mem_used / $mem_total * 100" | bc)
     
     log_info "内存总量: ${mem_total}MB"
     log_info "已使用: ${mem_used}MB (${mem_usage}%)"
@@ -154,7 +157,8 @@ check_disk_usage() {
 check_network_status() {
     log_section "网络状态"
     
-    local interfaces=$(ip link show | grep "state UP" | awk -F': ' '{print $2}')
+    local interfaces
+    interfaces=$(ip link show | grep "state UP" | awk -F': ' '{print $2}')
     
     for iface in $interfaces; do
         if [ "$iface" != "lo" ]; then
@@ -201,7 +205,8 @@ check_service_status() {
 check_running_processes() {
     log_section "运行进程"
     
-    local process_count=$(ps aux | wc -l)
+    local process_count
+    process_count=$(ps aux | wc -l)
     log_info "进程总数: $process_count"
     
     log_info "占用资源最高的进程:"
@@ -273,7 +278,8 @@ check_security() {
 check_cron_jobs() {
     log_section "定时任务检查"
     
-    local cron_count=$(crontab -l 2>/dev/null | grep -v "^#" | grep -v "^$" | wc -l)
+    local cron_count
+    cron_count=$(crontab -l 2>/dev/null | grep -v "^#" | grep -v "^$" | wc -l)
     log_info "定时任务数量: $cron_count"
     
     if [ "$cron_count" -gt 0 ]; then
@@ -291,7 +297,8 @@ check_backup_status() {
     log_section "备份状态"
     
     local backup_dir="/var/backups"
-    local recent_backup=$(find "$backup_dir" -type f -name "*.tar.gz" -mtime -7 2>/dev/null | head -1)
+    local recent_backup
+    recent_backup=$(find "$backup_dir" -type f -name "*.tar.gz" -mtime -7 2>/dev/null | head -1)
     
     if [ -n "$recent_backup" ]; then
         log_pass "最近一周有备份: $(basename "$recent_backup")"
@@ -303,9 +310,10 @@ check_backup_status() {
 generate_summary() {
     log_section "检查总结"
     
-    local pass_count=$(grep -c "^\[PASS\]" "$REPORT_FILE")
-    local fail_count=$(grep -c "^\[FAIL\]" "$REPORT_FILE")
-    local warn_count=$(grep -c "^\[WARN\]" "$REPORT_FILE")
+    local pass_count fail_count warn_count
+    pass_count=$(grep -c "^\[PASS\]" "$REPORT_FILE")
+    fail_count=$(grep -c "^\[FAIL\]" "$REPORT_FILE")
+    warn_count=$(grep -c "^\[WARN\]" "$REPORT_FILE")
     
     echo "" | tee -a "$REPORT_FILE"
     echo "检查结果汇总:" | tee -a "$REPORT_FILE"
@@ -339,8 +347,9 @@ send_email() {
     
     log_info "发送报告到: $EMAIL"
     
-    local subject="日常巡检报告 - $(hostname) - $(date '+%Y-%m-%d')"
-    local body="日常巡检报告已完成，请查看附件。"
+    local subject body
+    subject="日常巡检报告 - $(hostname) - $(date '+%Y-%m-%d')"
+    body="日常巡检报告已完成，请查看附件。"
     
     if command -v mutt &>/dev/null; then
         echo "$body" | mutt -s "$subject" -a "$REPORT_FILE" "$EMAIL"
