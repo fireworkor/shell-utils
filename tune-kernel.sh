@@ -34,15 +34,17 @@ get_system_info() {
 
 # 获取内存大小（单位：GB）
 get_memory_gb() {
-    local mem_kb=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
-    local mem_gb=$((mem_kb / 1024 / 1024))
+    local mem_kb mem_gb
+    mem_kb=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
+    mem_gb=$((mem_kb / 1024 / 1024))
     echo $mem_gb
 }
 
 # 获取内存大小（单位：MB）
 get_memory_mb() {
-    local mem_kb=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
-    local mem_mb=$((mem_kb / 1024))
+    local mem_kb mem_mb
+    mem_kb=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
+    mem_mb=$((mem_kb / 1024))
     echo $mem_mb
 }
 
@@ -615,9 +617,10 @@ main() {
     
     get_system_info
     
-    local mem_gb=$(get_memory_gb)
-    local mem_mb=$(get_memory_mb)
-    local profile=$(get_profile $mem_gb)
+    local mem_gb mem_mb profile
+    mem_gb=$(get_memory_gb)
+    mem_mb=$(get_memory_mb)
+    profile=$(get_profile "$mem_gb")
     
     echo -e "${YELLOW}内存信息：${NC}"
     echo "  总内存: ${mem_gb}GB (${mem_mb}MB)"

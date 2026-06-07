@@ -335,8 +335,9 @@ backup_files() {
     mkdir -p $FILES_BACKUP_DIR
     
     # 备份配置文件
-    local timestamp=$(date +%Y%m%d_%H%M%S)
-    local backup_file="$FILES_BACKUP_DIR/configs_${timestamp}.tar.gz"
+    local timestamp backup_file
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    backup_file="$FILES_BACKUP_DIR/configs_${timestamp}.tar.gz"
     
     tar czf $backup_file \
         /etc/nginx \
@@ -358,8 +359,9 @@ backup_db() {
     check_root
     echo -e "${BLUE}备份所有数据库...${NC}"
     
-    mkdir -p $DB_BACKUP_DIR
-    local timestamp=$(date +%Y%m%d_%H%M%S)
+    mkdir -p "$DB_BACKUP_DIR"
+    local timestamp
+    timestamp=$(date +%Y%m%d_%H%M%S)
     
     # MySQL/MariaDB 备份
     if command -v mysql &>/dev/null; then

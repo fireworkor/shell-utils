@@ -464,7 +464,10 @@ install_java() {
     dnf install -y java-${java_version}-openjdk java-${java_version}-openjdk-devel
     
     # 设置 JAVA_HOME
-    export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+    local java_path java_home
+    java_path=$(readlink -f "$(which java)")
+    java_home=$(dirname "$(dirname "$java_path")")
+    export JAVA_HOME="$java_home"
     echo "export JAVA_HOME=$JAVA_HOME" >> ~/.bashrc
     
     echo -e "${GREEN}OpenJDK $java_version 安装完成${NC}"
