@@ -302,7 +302,7 @@ install_software() {
         print_header "使用插件系统安装 $software${version:+ ($version)}"
         
         # 初始化插件管理器（如果需要）
-        if [ -z "${#PLUGIN_METADATA[@]}" ]; then
+        if [ ${#PLUGIN_METADATA[@]} -eq 0 ]; then
             discover_plugins
         fi
         
