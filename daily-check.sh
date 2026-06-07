@@ -133,9 +133,10 @@ check_disk_usage() {
     
     local critical=false
     
-    df -h | grep -v "tmpfs" | grep -v "loop" | while read line; do
-        local mount=$(echo "$line" | awk '{print $6}')
-        local usage=$(echo "$line" | awk '{print $5}' | sed 's/%//')
+    df -h | grep -v "tmpfs" | grep -v "loop" | while read -r line; do
+        local mount usage
+        mount=$(echo "$line" | awk '{print $6}')
+        usage=$(echo "$line" | awk '{print $5}' | sed 's/%//')
         
         log_info "$mount: $usage%"
         
@@ -162,7 +163,8 @@ check_network_status() {
     
     for iface in $interfaces; do
         if [ "$iface" != "lo" ]; then
-            local ip=$(ip addr show "$iface" | grep "inet " | awk '{print $2}')
+            local ip
+            ip=$(ip addr show "$iface" | grep "inet " | awk '{print $2}')
             log_info "$iface: $ip"
         fi
     done
@@ -251,8 +253,9 @@ check_security() {
     if [ -f "$SCRIPT_DIR/security-baseline/os/os_baseline.sh" ]; then
         bash "$SCRIPT_DIR/security-baseline/os/os_baseline.sh" > "$REPORT_DIR/security_check.log"
         
-        local fail_count=$(grep -c "^\[FAIL\]" "$REPORT_DIR/security_check.log")
-        local warn_count=$(grep -c "^\[WARN\]" "$REPORT_DIR/security_check.log")
+        local fail_count warn_count
+        fail_count=$(grep -c "^\[FAIL\]" "$REPORT_DIR/security_check.log")
+        warn_count=$(grep -c "^\[WARN\]" "$REPORT_DIR/security_check.log")
         
         if [ "$fail_count" -gt 0 ]; then
             log_fail "发现 $fail_count 项安全问题"

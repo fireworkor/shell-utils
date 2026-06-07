@@ -114,7 +114,8 @@ check_for_updates() {
 }
 
 backup_current() {
-    local backup_dir="$SCRIPT_DIR/backup_$(date +%Y%m%d_%H%M%S)"
+    local backup_dir
+    backup_dir="$SCRIPT_DIR/backup_$(date +%Y%m%d_%H%M%S)"
     
     log_info "备份当前脚本到: $backup_dir"
     
@@ -135,7 +136,8 @@ backup_current() {
 download_update() {
     log_info "下载更新..."
     
-    local tmp_dir=$(mktemp -d)
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
     
     git clone --depth=1 --branch "$REPO_BRANCH" "$REPO_URL" "$tmp_dir/shell-utils"
     
@@ -223,8 +225,9 @@ main() {
                 exit 0
             fi
             
-            local backup_dir=$(backup_current)
-            local source_dir=$(download_update)
+            local backup_dir source_dir
+            backup_dir=$(backup_current)
+            source_dir=$(download_update)
             
             if [ -z "$source_dir" ]; then
                 log_error "下载失败，回滚..."
@@ -249,7 +252,8 @@ main() {
             fi
             
             backup_current
-            local source_dir=$(download_update)
+            local source_dir
+            source_dir=$(download_update)
             
             if [ -n "$source_dir" ]; then
                 apply_update "$source_dir"
@@ -258,7 +262,8 @@ main() {
             ;;
         
         rollback)
-            local backup_dir=$(ls -dt "$SCRIPT_DIR/backup_"* 2>/dev/null | head -1)
+            local backup_dir
+            backup_dir=$(ls -dt "$SCRIPT_DIR/backup_"* 2>/dev/null | head -1)
             
             if [ -z "$backup_dir" ]; then
                 log_error "没有找到备份目录"

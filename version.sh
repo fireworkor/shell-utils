@@ -171,7 +171,8 @@ show_current_version() {
     echo "=========================================="
     
     # 检查当前配置版本
-    local config_version=$(grep "^${software^^}_VERSION" "$CONFIG_FILE" 2>/dev/null | awk -F'=' '{print $2}')
+    local config_version
+    config_version=$(grep "^${software^^}_VERSION" "$CONFIG_FILE" 2>/dev/null | awk -F'=' '{print $2}')
     
     # 检查已安装版本
     local installed_version
@@ -238,7 +239,8 @@ set_version() {
     echo -e "${CYAN}设置 $software 版本为 $version${NC}"
     echo "=========================================="
     
-    local upper_software=$(echo "$software" | tr '[:lower:]' '[:upper:]')
+    local upper_software
+    upper_software=$(echo "$software" | tr '[:lower:]' '[:upper:]')
     
     # 更新配置文件
     if grep -q "^${upper_software}_VERSION" "$CONFIG_FILE"; then
