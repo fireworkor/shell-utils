@@ -172,10 +172,12 @@ is_valid_pid() {
 # 获取有效PID
 get_valid_pid() {
     local valid_pid=""
+    local file_pid
+    local process_pids
     
     # 先尝试从PID文件获取
     if [ -f "$PID_FILE" ]; then
-        local file_pid=$(cat "$PID_FILE" 2>/dev/null)
+        file_pid=$(cat "$PID_FILE" 2>/dev/null)
         if is_valid_pid "$file_pid"; then
             valid_pid="$file_pid"
         fi
@@ -183,7 +185,7 @@ get_valid_pid() {
     
     # 如果PID文件无效，尝试直接查找进程
     if [ -z "$valid_pid" ]; then
-        local process_pids=$(get_process_pid)
+        process_pids=$(get_process_pid)
         for pid in $process_pids; do
             if is_valid_pid "$pid"; then
                 valid_pid="$pid"
@@ -199,7 +201,7 @@ get_valid_pid() {
 check_and_install_command() {
     local cmd=$1
     local package=$2
-    if ! command -v $cmd &> /dev/null; then
+    if ! command -v "$cmd" &> /dev/null; then
         log_warning "安装 $cmd..."
         local pkg_manager=""
         if command -v dnf &> /dev/null; then
@@ -213,12 +215,12 @@ check_and_install_command() {
         if [ -n "$pkg_manager" ]; then
             case $pkg_manager in
                 dnf|yum)
-                    $pkg_manager install -y $package 2>/dev/null
+                    $pkg_manager install -y "$package" 2>/dev/null
                     ;;
                 apt)
                     export DEBIAN_FRONTEND=noninteractive
                     apt update -qq 2>/dev/null
-                    apt install -y $package 2>/dev/null
+                    apt install -y "$package" 2>/dev/null
                     ;;
             esac
         fi
@@ -282,7 +284,8 @@ start() {
     log_info "启动 Web UI 服务..."
     
     # 检查是否已在运行
-    local current_pid=$(get_valid_pid)
+    local current_pid
+    current_pid=$(get_valid_pid)
     if [ -n "$current_pid" ]; then
         log_warning "服务已在运行 (PID: $current_pid)，正在停止..."
         stop
@@ -290,18 +293,19 @@ start() {
     fi
     
     # 检查端口是否被占用（包括其他进程）
-    if check_port $PORT; then
-        local port_pid=$(get_port_pid $PORT)
+    if check_port "$PORT"; then
+        local port_pid
+        port_pid=$(get_port_pid "$PORT")
         if [ -n "$port_pid" ]; then
             log_warning "端口 $PORT 已被占用 (PID: $port_pid)，正在停止..."
             # 尝试停止占用端口的进程
-            if kill -0 $port_pid 2>/dev/null; then
-                kill $port_pid 2>/dev/null
+            if kill -0 "$port_pid" 2>/dev/null; then
+                kill "$port_pid" 2>/dev/null
                 sleep 2
                 # 如果还在运行，强制杀死
-                if kill -0 $port_pid 2>/dev/null; then
+                if kill -0 "$port_pid" 2>/dev/null; then
                     log_warning "进程未响应，强制停止..."
-                    kill -9 $port_pid 2>/dev/null
+                    kill -9 "$port_pid" 2>/dev/null
                     sleep 1
                 fi
             fi
@@ -329,13 +333,14 @@ start() {
     local max_wait=30
     local waited=0
     local started=0
+    local port_pid
     
     while [ $waited -lt $max_wait ]; do
-        if is_valid_pid $new_pid; then
+        if is_valid_pid "$new_pid"; then
             # 检查端口是否监听
-            if check_port $PORT; then
+            if check_port "$PORT"; then
                 # 验证端口和进程匹配
-                local port_pid=$(get_port_pid $PORT)
+                port_pid=$(get_port_pid "$PORT")
                 if [ -z "$port_pid" ] || [ "$port_pid" = "$new_pid" ] || echo "$port_pid" | grep -q "$new_pid"; then
                     started=1
                     break
@@ -349,7 +354,7 @@ start() {
     echo ""
     
     if [ $started -eq 1 ]; then
-        echo $new_pid > "$PID_FILE"
+        echo "$new_pid" > "$PID_FILE"
         log_success "服务启动成功"
         echo ""
         echo -e "${CYAN}📍 访问地址: http://localhost:$PORT${NC}"
@@ -368,7 +373,8 @@ stop() {
     print_header
     log_info "停止 Web UI 服务..."
     
-    local current_pid=$(get_valid_pid)
+    local current_pid
+    current_pid=$(get_valid_pid)
     
     if [ -z "$current_pid" ]; then
         log_warning "服务未运行"
@@ -376,16 +382,17 @@ stop() {
         return 0
     fi
     
+    
     log_info "正在停止进程 (PID: $current_pid)..."
     
     # 尝试优雅停止
-    kill $current_pid 2>/dev/null
+    kill "$current_pid" 2>/dev/null
     
     # 等待进程退出
     local max_wait=10
     local waited=0
     while [ $waited -lt $max_wait ]; do
-        if ! is_valid_pid $current_pid; then
+        if ! is_valid_pid "$current_pid"; then
             break
         fi
         sleep 1
@@ -395,9 +402,9 @@ stop() {
     echo ""
     
     # 如果还在运行，强制杀死
-    if is_valid_pid $current_pid; then
+    if is_valid_pid "$current_pid"; then
         log_warning "进程未响应，强制停止..."
-        kill -9 $current_pid 2>/dev/null
+        kill -9 "$current_pid" 2>/dev/null
         sleep 2
     fi
     
@@ -405,7 +412,7 @@ stop() {
     rm -f "$PID_FILE"
     
     # 最终检查
-    if ! is_valid_pid $current_pid; then
+    if ! is_valid_pid "$current_pid"; then
         log_success "服务已停止"
         return 0
     else
@@ -426,20 +433,23 @@ restart() {
 status() {
     print_header
     
-    local current_pid=$(get_valid_pid)
+    local current_pid
+    current_pid=$(get_valid_pid)
     
     if [ -n "$current_pid" ]; then
         log_success "服务正在运行"
         echo -e "${CYAN}🔢 进程 PID: $current_pid${NC}"
         if [ -f "/proc/$current_pid/status" ]; then
-            local mem=$(cat /proc/$current_pid/status | grep VmRSS | awk '{print $2 " " $3}')
+            local mem
+            mem=$(grep VmRSS "/proc/$current_pid/status" | awk '{print $2 " " $3}')
             echo -e "${CYAN}💾 内存使用: $mem${NC}"
         fi
         echo -e "${CYAN}📍 访问地址: http://localhost:$PORT${NC}"
         echo -e "${CYAN}📝 日志文件: $LOG_FILE${NC}"
         
         if [ -f "$PID_FILE" ]; then
-            local file_pid=$(cat "$PID_FILE")
+            local file_pid
+            file_pid=$(cat "$PID_FILE")
             if [ "$file_pid" != "$current_pid" ]; then
                 log_warning "PID 文件内容 ($file_pid) 与实际运行 PID ($current_pid) 不一致"
             fi
@@ -480,7 +490,7 @@ show_config() {
     
     if [ -f "$CONFIG_FILE" ]; then
         echo -e "${YELLOW}配置文件内容:${NC}"
-        cat "$CONFIG_FILE" | sed 's/^/  /'
+        sed 's/^/  /' "$CONFIG_FILE"
     else
         echo -e "${YELLOW}配置文件不存在，使用默认值${NC}"
     fi
