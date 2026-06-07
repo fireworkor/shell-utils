@@ -109,6 +109,9 @@ save_plugin_cache() {
         for plugin in "${!PLUGIN_METADATA[@]}"; do
             echo "PLUGIN_METADATA[$plugin]='${PLUGIN_METADATA[$plugin]}'"
         done
+        for plugin in "${!PLUGIN_STATUS[@]}"; do
+            echo "PLUGIN_STATUS[$plugin]='${PLUGIN_STATUS[$plugin]}'"
+        done
     } > "$cache_file"
     
     log_info "插件缓存已保存"
@@ -267,10 +270,18 @@ list_plugins() {
         
         load_plugin_metadata "$plugin_name"
         
+        # 获取插件状态
+        local status="${PLUGIN_STATUS[$plugin_name]:-registered}"
+        local status_color="$YELLOW"
+        [ "$status" = "installed" ] && status_color="$GREEN"
+        [ "$status" = "enabled" ] && status_color="$CYAN"
+        
         if [ "$verbose" = "true" ]; then
-            printf "  ${GREEN}%s${NC} v%s - %s\n" "$PLUGIN_NAME" "$PLUGIN_VERSION" "$PLUGIN_DESCRIPTION"
+            printf "  ${GREEN}%s${NC} v%s - %s (${status_color}%s${NC})\n" \
+                "$PLUGIN_NAME" "$PLUGIN_VERSION" "$PLUGIN_DESCRIPTION" "$status"
         else
-            printf "  ${GREEN}%s${NC} - %s\n" "$PLUGIN_NAME" "$PLUGIN_CATEGORY"
+            printf "  ${GREEN}%s${NC} - %s (${status_color}%s${NC})\n" \
+                "$PLUGIN_NAME" "$PLUGIN_CATEGORY" "$status"
         fi
         
         count=$((count + 1))
@@ -417,7 +428,20 @@ plugin_disable() {
 # 检查插件是否已安装
 is_plugin_installed() {
     local plugin_name=$1
-    local status="${PLUGIN_STATUS[$plugin_name]}"
+    
+    if [ "$plugin_name" = "*" ]; then
+        # 统计已安装的插件数量
+        local count=0
+        for status in "${PLUGIN_STATUS[@]}"; do
+            if [ "$status" = "installed" ] || [ "$status" = "enabled" ]; then
+                count=$((count + 1))
+            fi
+        done
+        echo "$count"
+        return 0
+    fi
+    
+    local status="${PLUGIN_STATUS[$plugin_name]:-}"
     
     [ "$status" = "installed" ] || [ "$status" = "enabled" ]
 }
@@ -518,6 +542,11 @@ install_plugin_dependencies() {
 search_plugins() {
     local keyword=$1
     
+    # 确保插件已发现
+    if [ ${#PLUGIN_METADATA[@]} -eq 0 ]; then
+        discover_plugins
+    fi
+    
     echo ""
     print_header "搜索结果: $keyword"
     echo ""
@@ -526,8 +555,8 @@ search_plugins() {
     for plugin_name in "${!PLUGIN_METADATA[@]}"; do
         load_plugin_metadata "$plugin_name"
         
-        # 在名称和描述中搜索
-        if [[ "$PLUGIN_NAME" =~ $keyword ]] || [[ "$PLUGIN_DESCRIPTION" =~ $keyword ]]; then
+        # 在名称和描述中搜索（使用小写匹配，更灵活）
+        if [[ "${PLUGIN_NAME,,}" =~ "${keyword,,}" ]] || [[ "${PLUGIN_DESCRIPTION,,}" =~ "${keyword,,}" ]]; then
             printf "  ${GREEN}%s${NC} v%s - %s\n" "$PLUGIN_NAME" "$PLUGIN_VERSION" "$PLUGIN_DESCRIPTION"
             count=$((count + 1))
         fi
@@ -671,15 +700,30 @@ diagnose_plugins() {
     [ -d "$CACHE_DIR" ] && echo "      ✓ 存在" || echo "      ✗ 不存在"
     echo ""
     
+    # 确保插件已发现
+    if [ ${#PLUGIN_METADATA[@]} -eq 0 ]; then
+        discover_plugins
+    fi
+    
+    # 统计已启用插件
+    local enabled_count=0
+    for status in "${PLUGIN_STATUS[@]}"; do
+        if [ "$status" = "enabled" ]; then
+            enabled_count=$((enabled_count + 1))
+        fi
+    done
+    
     echo -e "  ${YELLOW}插件统计:${NC}"
     echo "    已注册: ${#PLUGIN_METADATA[@]} 个"
-    echo "    已安装: $(is_plugin_installed '*' | wc -l) 个"
-    echo "    已启用: 0 个"
+    echo "    已安装: $(is_plugin_installed '*') 个"
+    echo "    已启用: ${enabled_count} 个"
     echo ""
     
     echo -e "  ${YELLOW}权限检查:${NC}"
     [ -w "$PLUGIN_DIR" ] && echo "    ✓ 插件目录可写" || echo "    ✗ 插件目录不可写"
-    [ -w "$CUSTOM_PLUGIN_DIR" ] && echo "    ✓ 自定义插件可写" || echo "    ✗ 自定义插件不可写"
+    [ -d "$CUSTOM_PLUGIN_DIR" ] && [ -w "$CUSTOM_PLUGIN_DIR" ] && echo "    ✓ 自定义插件可写" || {
+        [ ! -d "$CUSTOM_PLUGIN_DIR" ] && echo "    ✗ 自定义插件目录不存在" || echo "    ✗ 自定义插件不可写"
+    }
     echo ""
 }
 
@@ -773,6 +817,15 @@ EOF
 plugin_main() {
     local command=${1:-help}
     shift
+    
+    # 对于需要插件的命令，确保插件已发现
+    case "$command" in
+        install|uninstall|remove|enable|disable|update|info)
+            if [ ${#PLUGIN_METADATA[@]} -eq 0 ]; then
+                discover_plugins
+            fi
+            ;;
+    esac
     
     case "$command" in
         init)
