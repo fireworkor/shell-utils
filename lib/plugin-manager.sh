@@ -131,7 +131,8 @@ discover_plugins() {
     if [ -d "$PLUGIN_DIR" ]; then
         for plugin_path in "$PLUGIN_DIR"/*/; do
             if [ -d "$plugin_path" ]; then
-                local plugin_name=$(basename "$plugin_path")
+                local plugin_name
+                plugin_name=$(basename "$plugin_path")
                 if validate_plugin "$plugin_name"; then
                     plugins+=("$plugin_name")
                     register_plugin "$plugin_name" "$plugin_path"
@@ -144,7 +145,8 @@ discover_plugins() {
     if [ -d "$CUSTOM_PLUGIN_DIR" ]; then
         for plugin_path in "$CUSTOM_PLUGIN_DIR"/*/; do
             if [ -d "$plugin_path" ]; then
-                local plugin_name=$(basename "$plugin_path")
+                local plugin_name
+                plugin_name=$(basename "$plugin_path")
                 if validate_plugin "$plugin_name"; then
                     # 自定义插件优先级更高
                     plugins=("$plugin_name" "${plugins[@]}")
@@ -373,7 +375,7 @@ plugin_uninstall() {
         
         if [ $status -eq 0 ]; then
             # 标记为已卸载
-            unset PLUGIN_STATUS[$plugin_name]
+            unset "PLUGIN_STATUS[$plugin_name]"
             save_plugin_cache
             
             # 执行卸载后钩子
@@ -552,11 +554,12 @@ search_plugins() {
     echo ""
     
     local count=0
+    local lower_keyword=${keyword,,}
     for plugin_name in "${!PLUGIN_METADATA[@]}"; do
         load_plugin_metadata "$plugin_name"
         
         # 在名称和描述中搜索（使用小写匹配，更灵活）
-        if [[ "${PLUGIN_NAME,,}" =~ "${keyword,,}" ]] || [[ "${PLUGIN_DESCRIPTION,,}" =~ "${keyword,,}" ]]; then
+        if [[ "${PLUGIN_NAME,,}" == *"$lower_keyword"* ]] || [[ "${PLUGIN_DESCRIPTION,,}" == *"$lower_keyword"* ]]; then
             printf "  ${GREEN}%s${NC} v%s - %s\n" "$PLUGIN_NAME" "$PLUGIN_VERSION" "$PLUGIN_DESCRIPTION"
             count=$((count + 1))
         fi
@@ -575,12 +578,15 @@ get_plugin_stats() {
         echo "插件分类统计 - $(date)"
         echo "================================"
         
-        local categories=$(find "$PLUGIN_DIR" "$CUSTOM_PLUGIN_DIR" -name "plugin.json" -exec grep -l '"category"' {} \; 2>/dev/null)
+        local categories
+        categories=$(find "$PLUGIN_DIR" "$CUSTOM_PLUGIN_DIR" -name "plugin.json" -exec grep -l '"category"' {} \; 2>/dev/null)
         
         declare -A category_count
         for metadata_file in $categories; do
-            local plugin_dir=$(dirname "$metadata_file")
-            local category=$(grep -oP '"category"\s*:\s*"\K[^"]+' "$metadata_file" 2>/dev/null || echo "other")
+            local plugin_dir
+            plugin_dir=$(dirname "$metadata_file")
+            local category
+            category=$(grep -oP '"category"\s*:\s*"\K[^"]+' "$metadata_file" 2>/dev/null || echo "other")
             category_count[$category]=$((category_count[$category] + 1))
         done
         
@@ -720,10 +726,20 @@ diagnose_plugins() {
     echo ""
     
     echo -e "  ${YELLOW}权限检查:${NC}"
-    [ -w "$PLUGIN_DIR" ] && echo "    ✓ 插件目录可写" || echo "    ✗ 插件目录不可写"
-    [ -d "$CUSTOM_PLUGIN_DIR" ] && [ -w "$CUSTOM_PLUGIN_DIR" ] && echo "    ✓ 自定义插件可写" || {
-        [ ! -d "$CUSTOM_PLUGIN_DIR" ] && echo "    ✗ 自定义插件目录不存在" || echo "    ✗ 自定义插件不可写"
-    }
+    if [ -w "$PLUGIN_DIR" ]; then
+        echo "    ✓ 插件目录可写"
+    else
+        echo "    ✗ 插件目录不可写"
+    fi
+    if [ -d "$CUSTOM_PLUGIN_DIR" ]; then
+        if [ -w "$CUSTOM_PLUGIN_DIR" ]; then
+            echo "    ✓ 自定义插件可写"
+        else
+            echo "    ✗ 自定义插件不可写"
+        fi
+    else
+        echo "    ✗ 自定义插件目录不存在"
+    fi
     echo ""
 }
 

@@ -721,7 +721,7 @@ install_with_version() {
 # 执行安装
 execute_install() {
     local software=$1
-    local options="${2:-}"
+    local options=$2
     
     clear
     print_header "🚀 正在安装 $software"

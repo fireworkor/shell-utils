@@ -515,12 +515,15 @@ main() {
             fi
             uninstall_software "$@"
             ;;
-        upgrade|update)
+        upgrade)
             if [ -z "$1" ]; then
                 print_error "请指定要升级的软件"
                 exit 1
             fi
             upgrade_software "$@"
+            ;;
+        update)
+            bash "$SCRIPT_DIR/update.sh" "$@"
             ;;
         config)
             handle_config "$@"
@@ -609,9 +612,6 @@ main() {
         ssl)
             install_software ssl "$@"
             ;;
-        backup)
-            install_software backup
-            ;;
         cleanup)
             install_software cleanup
             ;;
@@ -697,7 +697,12 @@ main() {
             bash "$SCRIPT_DIR/healthcheck/healthcheck.sh" "$@"
             ;;
         backup)
-            bash "$SCRIPT_DIR/backup/backup.sh" backup "$@"
+            if [ "$1" = "install" ]; then
+                shift
+                install_software backup "$@"
+            else
+                bash "$SCRIPT_DIR/backup/backup.sh" backup "$@"
+            fi
             ;;
         restore)
             bash "$SCRIPT_DIR/backup/backup.sh" restore "$@"
@@ -716,9 +721,6 @@ main() {
             ;;
         ops)
             bash "$SCRIPT_DIR/ops.sh" "$@"
-            ;;
-        update)
-            bash "$SCRIPT_DIR/update.sh" "$@"
             ;;
         webui)
             if [ "$1" = "stop" ]; then
