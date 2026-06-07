@@ -31,7 +31,8 @@ log_error() {
 create_backup() {
     local file="$1"
     if [ -f "$file" ]; then
-        local backup="${file}.$(date '+%Y%m%d_%H%M%S').bak"
+        local backup
+        backup="${file}.$(date '+%Y%m%d_%H%M%S').bak"
         cp "$file" "$backup"
         log_success "已创建备份: $backup"
         echo "$backup"
@@ -86,8 +87,9 @@ show_progress() {
 count_files() {
     local dir="${1:-.}"
     if [ -d "$dir" ]; then
-        local file_count=$(find "$dir" -type f | wc -l)
-        local dir_count=$(find "$dir" -type d | wc -l)
+        local file_count dir_count
+        file_count=$(find "$dir" -type f | wc -l)
+        dir_count=$(find "$dir" -type d | wc -l)
         log_info "目录统计 ($dir):"
         echo "  文件数: $file_count"
         echo "  目录数: $dir_count"
@@ -178,7 +180,8 @@ check_disk_usage() {
     log_info "检查磁盘使用情况 (阈值: ${threshold}%):"
     df -h | awk -v threshold="$threshold" 'NR==1; /^\/dev\// {print $0}' | while read -r line; do
         if echo "$line" | grep -q -E '([0-9]+)%'; then
-            local usage=$(echo "$line" | grep -oE '[0-9]+%' | tr -d '%')
+            local usage
+            usage=$(echo "$line" | grep -oE '[0-9]+%' | tr -d '%')
             if [ "$usage" -ge "$threshold" ]; then
                 log_warning "$line"
             else

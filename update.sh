@@ -93,8 +93,9 @@ get_latest_version() {
 check_for_updates() {
     log_info "检查更新..."
     
-    local current_version=$(get_current_version)
-    local latest_version=$(get_latest_version)
+    local current_version latest_version
+    current_version=$(get_current_version)
+    latest_version=$(get_latest_version)
     
     log_info "当前版本: $current_version"
     log_info "最新版本: $latest_version"
@@ -279,8 +280,9 @@ main() {
             ;;
         
         version)
-            local current=$(get_current_version)
-            local latest=$(get_latest_version)
+            local current latest
+            current=$(get_current_version)
+            latest=$(get_latest_version)
             echo "当前版本: $current"
             echo "最新版本: $latest"
             ;;
