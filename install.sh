@@ -137,6 +137,7 @@ configure_firewall() {
 
 # 安装 Nginx
 install_nginx() {
+    check_root
     echo -e "${BLUE}正在安装 Nginx...${NC}"
     case $PKG_MANAGER in
         dnf|yum)
@@ -152,15 +153,17 @@ modulehotfixes=true
 EOF
             fi
             yum install -y nginx
+            systemctl start nginx && systemctl enable nginx
             ;;
         apt)
             export DEBIAN_FRONTEND=noninteractive
             apt update
             apt install -y nginx
+            systemctl start nginx && systemctl enable nginx
             ;;
     esac
-    systemctl start nginx && systemctl enable nginx
     echo -e "${GREEN}✓ Nginx 安装完成${NC}"
+    echo -e "${YELLOW}访问地址: http://$(hostname -I | awk '{print $1}')${NC}"
 }
 
 # 安装 Apache
@@ -290,100 +293,90 @@ install_postgresql() {
 
 # 安装 PHP
 install_php() {
-    local version=${1:-7.4}
-    echo -e "${BLUE}正在安装 PHP $version...${NC}"
+    local version="${1:-7.4}"
+    check_root
+    echo -e "${BLUE}正在安装 PHP ${version}...${NC}"
     case $PKG_MANAGER in
         dnf|yum)
             yum install -y epel-release
-            if [ "$PKG_MANAGER" = "dnf" ]; then
-                yum install -y https://rpms.remirepo.net/enterprise/remi-release-8.rpm
-                yum module reset php -y
-                yum module enable php:remi-${version} -y
-            else
-                yum install -y https://rpms.remirepo.net/enterprise/remi-release-7.rpm
-                yum module reset php -y
-                yum module enable php:remi-${version} -y
-            fi
-            yum install -y php php-fpm php-mysql php-pdo php-mbstring \
-                php-xml php-gd php-curl php-zip php-intl php-bcmath
+            yum install -y php php-cli php-fpm php-mysqlnd php-zip php-devel php-gd php-mcrypt php-mbstring php-curl php-xml php-pear php-bcmath php-json php-redis php-opcache
+            systemctl start php-fpm && systemctl enable php-fpm
             ;;
         apt)
             export DEBIAN_FRONTEND=noninteractive
             apt update
-            apt install -y software-properties-common
-            add-apt-repository -y ppa:ondrej/php
-            apt update
-            apt install -y php${version} php${version}-fpm php${version}-mysql php${version}-mbstring \
-                php${version}-xml php${version}-gd php${version}-curl php${version}-zip php${version}-intl php${version}-bcmath
+            apt install -y "php${version}" "php${version}-cli" "php${version}-fpm" "php${version}-mysql" "php${version}-zip" "php${version}-gd" "php${version}-mbstring" "php${version}-curl" "php${version}-xml" "php${version}-bcmath" "php${version}-json" "php${version}-redis" "php${version}-opcache"
+            systemctl start "php${version}-fpm" && systemctl enable "php${version}-fpm"
             ;;
     esac
-    systemctl start php-fpm && systemctl enable php-fpm
-    echo -e "${GREEN}✓ PHP $version 安装完成${NC}"
+    php -v
+    echo -e "${GREEN}✓ PHP ${version} 安装完成${NC}"
 }
 
 # 安装 Python
 install_python() {
-    local version=${1:-3.11}
-    echo -e "${BLUE}正在安装 Python $version...${NC}"
+    local version="${1:-3.11}"
+    check_root
+    echo -e "${BLUE}正在安装 Python ${version}...${NC}"
     case $PKG_MANAGER in
         dnf|yum)
-            yum install -y gcc openssl-devel bzip2-devel libffi-devel zlib-devel
-            cd /tmp
-            wget -q https://www.python.org/ftp/python/${version}.0/Python-${version}.0.tgz
-            tar xzf Python-${version}.0.tgz
-            cd Python-${version}.0
-            ./configure --enable-optimizations > /dev/null 2>&1
-            make altinstall -j$(nproc) > /dev/null 2>&1
-            cd ~
-            rm -rf /tmp/Python-${version}*
+            yum install -y "python${version}" "python${version}-pip"
             ;;
         apt)
             export DEBIAN_FRONTEND=noninteractive
             apt update
-            apt install -y software-properties-common
-            add-apt-repository -y ppa:deadsnakes/ppa
-            apt update
-            apt install -y python${version} python${version}-dev python${version}-venv python3-pip
+            apt install -y "python${version}" "python${version}-pip"
             ;;
     esac
-    echo -e "${GREEN}✓ Python $version 安装完成${NC}"
+    "python${version}" --version
+    echo -e "${GREEN}✓ Python ${version} 安装完成${NC}"
 }
 
 # 安装 Node.js
 install_nodejs() {
-    local version=${1:-20}
-    echo -e "${BLUE}正在安装 Node.js $version...${NC}"
+    local version="${1:-20}"
+    check_root
+    echo -e "${BLUE}正在安装 Node.js ${version}...${NC}"
+    
+    if command -v node &>/dev/null; then
+        echo -e "${YELLOW}Node.js 已安装: $(node -v)${NC}"
+        return 0
+    fi
+    
     case $PKG_MANAGER in
         dnf|yum)
-            curl -fsSL https://rpm.nodesource.com/setup_${version}.x | bash -
-            yum install -y nodejs
-            npm install -g npm yarn
+            curl -fsSL "https://rpm.nodesource.com/setup_${version}.x" | bash -
+            yum install -y nodejs npm
             ;;
         apt)
             export DEBIAN_FRONTEND=noninteractive
-            curl -fsSL https://deb.nodesource.com/setup_${version}.x | bash -
-            apt install -y nodejs
-            npm install -g npm yarn
+            curl -fsSL "https://deb.nodesource.com/setup_${version}.x" | bash -
+            apt update
+            apt install -y nodejs npm
             ;;
     esac
-    echo -e "${GREEN}✓ Node.js $version 安装完成${NC}"
+    node -v
+    npm -v
+    echo -e "${GREEN}✓ Node.js ${version} 安装完成${NC}"
 }
 
 # 安装 Java
 install_java() {
-    local version=${1:-11}
-    echo -e "${BLUE}正在安装 OpenJDK $version...${NC}"
+    local version="${1:-11}"
+    check_root
+    echo -e "${BLUE}正在安装 OpenJDK ${version}...${NC}"
     case $PKG_MANAGER in
         dnf|yum)
-            yum install -y java-${version}-openjdk java-${version}-openjdk-devel
+            yum install -y "java-${version}-openjdk" "java-${version}-openjdk-devel"
             ;;
         apt)
             export DEBIAN_FRONTEND=noninteractive
             apt update
-            apt install -y openjdk-${version}-jdk openjdk-${version}-jdk-headless
+            apt install -y "openjdk-${version}-jdk"
             ;;
     esac
-    echo -e "${GREEN}✓ OpenJDK $version 安装完成${NC}"
+    java -version
+    echo -e "${GREEN}✓ OpenJDK ${version} 安装完成${NC}"
 }
 
 # 安装 Docker
@@ -445,7 +438,8 @@ install_redis() {
 tune_kernel() {
     check_root
     
-    local mem_gb=$(free -g | awk 'NR==2 {print $2}')
+    local mem_gb
+    mem_gb=$(free -g | awk 'NR==2 {print $2}')
     
     echo -e "${BLUE}========================================${NC}"
     echo -e "${BLUE}   内核调优（检测到内存: ${mem_gb}GB）${NC}"
@@ -453,14 +447,15 @@ tune_kernel() {
     echo ""
     
     local profile=""
-    if [ $mem_gb -lt 2 ]; then
+    local tcp_mem_max tcp_rmem_max tcp_wmem_max file_max nofile_limit
+    if [ "$mem_gb" -lt 2 ]; then
         profile="small"
         tcp_mem_max="786432 1048576 1572864"
         tcp_rmem_max="4096 87380 4194304"
         tcp_wmem_max="4096 65536 4194304"
         file_max="65536"
         nofile_limit="65536"
-    elif [ $mem_gb -lt 8 ]; then
+    elif [ "$mem_gb" -lt 8 ]; then
         profile="medium"
         tcp_mem_max="3145728 4194304 6291456"
         tcp_rmem_max="4096 87380 67108864"
@@ -496,7 +491,6 @@ net.ipv4.ip_local_port_range = 10240 65535
 net.core.netdev_max_backlog = 5000
 net.core.somaxconn = 8192
 net.ipv4.tcp_max_syn_backlog = 8192
-
 fs.file-max = $file_max
 fs.inotify.max_user_watches = 524288
 vm.swappiness = 10
@@ -522,7 +516,7 @@ root soft nofile $nofile_limit
 root hard nofile $nofile_limit
 EOF
     
-    ulimit -n $nofile_limit 2>/dev/null || true
+    ulimit -n "$nofile_limit" 2>/dev/null || true
     
     echo -e "${GREEN}✓ 内核调优完成${NC}"
     echo -e "${YELLOW}建议重启系统使配置完全生效: reboot${NC}"
@@ -662,15 +656,16 @@ backup_all() {
     
     local BACKUP_DIR="/var/backups"
     local DB_BACKUP_DIR="$BACKUP_DIR/databases"
-    mkdir -p $DB_BACKUP_DIR
+    mkdir -p "$DB_BACKUP_DIR"
     
-    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local timestamp
+    timestamp=$(date +%Y%m%d_%H%M%S)
     
     if command -v mysql &>/dev/null || command -v mysqldump &>/dev/null; then
-        mkdir -p $DB_BACKUP_DIR/mysql
+        mkdir -p "$DB_BACKUP_DIR/mysql"
         mysqldump --all-databases --single-transaction --quick --lock-tables=false \
-            > $DB_BACKUP_DIR/mysql/all_databases_${timestamp}.sql 2>/dev/null || true
-        gzip $DB_BACKUP_DIR/mysql/all_databases_${timestamp}.sql
+            > "$DB_BACKUP_DIR/mysql/all_databases_${timestamp}.sql" 2>/dev/null || true
+        gzip "$DB_BACKUP_DIR/mysql/all_databases_${timestamp}.sql"
     fi
     
     echo -e "${GREEN}✓ 备份完成${NC}"

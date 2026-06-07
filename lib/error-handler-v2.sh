@@ -56,7 +56,8 @@ set_error_log() {
 # 记录错误到文件
 log_error_to_file() {
     local error_msg="$1"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     
     if [ -n "$ERROR_LOG_FILE" ]; then
         echo "[$timestamp] ERROR: $error_msg" >> "$ERROR_LOG_FILE"
@@ -66,7 +67,8 @@ log_error_to_file() {
 # 记录警告到文件
 log_warning_to_file() {
     local warning_msg="$1"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     
     if [ -n "$ERROR_LOG_FILE" ]; then
         echo "[$timestamp] WARNING: $warning_msg" >> "$ERROR_LOG_FILE"
@@ -87,7 +89,7 @@ print_error() {
     
     ERROR_COUNT=$((ERROR_COUNT + 1))
     
-    echo -e "\033[0;31m✗ 错误 [$error_code]: $(get_error_message $error_code)\033[0m" >&2
+    echo -e "\033[0;31m✗ 错误 [$error_code]: $(get_error_message "$error_code")\033[0m" >&2
     
     if [ -n "$message" ]; then
         echo -e "  原因: $message" >&2
@@ -208,7 +210,7 @@ print_error_with_suggestion() {
     
     print_error "$error_code" "$message" "$details"
     echo ""
-    echo -e "\033[1;36m建议:\033[0m $(get_recovery_suggestion $error_code)"
+    echo -e "\033[1;36m建议:\033[0m $(get_recovery_suggestion "$error_code")"
 }
 
 # 验证函数参数
@@ -251,8 +253,7 @@ validate_directory() {
     
     if [ ! -d "$dir_path" ]; then
         if [ "$create_if_missing" == "true" ]; then
-            mkdir -p "$dir_path" 2>/dev/null
-            if [ $? -eq 0 ]; then
+            if mkdir -p "$dir_path" 2>/dev/null; then
                 print_info "已创建目录: $dir_path"
                 return 0
             else
