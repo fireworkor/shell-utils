@@ -33,7 +33,8 @@ log() {
     local level=$1
     shift
     local message="$*"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     
     echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
 }
@@ -57,9 +58,9 @@ log_debug() {
 }
 
 log_cmd() {
-    local cmd="$@"
+    local cmd="$*"
     log "CMD" "Executing: $cmd"
-    eval "$cmd" 2>&1 | while read line; do
+    eval "$cmd" 2>&1 | while read -r line; do
         log "CMD" "$line"
     done
 }

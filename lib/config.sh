@@ -46,7 +46,7 @@ list_config() {
     if load_config; then
         echo -e "${YELLOW}当前配置：${NC}"
         echo ""
-        grep -E "^[A-Z_]+=" "$CONFIG_FILE" | while read line; do
+        grep -E "^[A-Z_]+=" "$CONFIG_FILE" | while read -r line; do
             key=$(echo "$line" | cut -d'=' -f1)
             value=$(echo "$line" | cut -d'=' -f2-)
             echo -e "  ${GREEN}$key${NC} = $value"

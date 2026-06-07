@@ -45,7 +45,8 @@ remote_exec() {
     fi
     
     local cmd="$*"
-    local ssh_prefix=$(get_ssh_prefix)
+    local ssh_prefix
+    ssh_prefix=$(get_ssh_prefix)
     
     if [ -n "$REMOTE_PASSWORD" ]; then
         sshpass -p "$REMOTE_PASSWORD" ssh -o StrictHostKeyChecking=no -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "$cmd"
