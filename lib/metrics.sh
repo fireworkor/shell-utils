@@ -24,22 +24,27 @@ init_metrics() {
 
 # 获取 CPU 使用率
 get_cpu_usage() {
-    local cpu_usage=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | sed 's/%us,//')
+    local cpu_usage
+    cpu_usage=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | sed 's/%us,//')
     echo "$cpu_usage" | sed 's/^[[:space:]]*//'
 }
 
 # 获取内存使用率
 get_mem_usage() {
-    local mem_info=$(free | grep Mem)
-    local total=$(echo "$mem_info" | awk '{print $2}')
-    local used=$(echo "$mem_info" | awk '{print $3}')
+    local mem_info
+    mem_info=$(free | grep Mem)
+    local total
+    total=$(echo "$mem_info" | awk '{print $2}')
+    local used
+    used=$(echo "$mem_info" | awk '{print $3}')
     local percent=$((used * 100 / total))
     echo "$percent"
 }
 
 # 获取磁盘使用率
 get_disk_usage() {
-    local disk_usage=$(df -h / | tail -1 | awk '{print $5}' | sed 's/%//')
+    local disk_usage
+    disk_usage=$(df -h / | tail -1 | awk '{print $5}' | sed 's/%//')
     echo "$disk_usage"
 }
 
@@ -119,21 +124,24 @@ get_service_status() {
 # 告警检查
 check_alerts() {
     local alerts=()
+    local cpu_usage
+    local mem_usage
+    local disk_usage
     
     # CPU 检查
-    local cpu_usage=$(get_cpu_usage | sed 's/%//')
+    cpu_usage=$(get_cpu_usage | sed 's/%//')
     if [ "$cpu_usage" -ge "$ALERT_THRESHOLD_CPU" ]; then
         alerts+=("CPU 使用率过高: ${cpu_usage}%")
     fi
     
     # 内存检查
-    local mem_usage=$(get_mem_usage)
+    mem_usage=$(get_mem_usage)
     if [ "$mem_usage" -ge "$ALERT_THRESHOLD_MEM" ]; then
         alerts+=("内存使用率过高: ${mem_usage}%")
     fi
     
     # 磁盘检查
-    local disk_usage=$(get_disk_usage)
+    disk_usage=$(get_disk_usage)
     if [ "$disk_usage" -ge "$ALERT_THRESHOLD_DISK" ]; then
         alerts+=("磁盘使用率过高: ${disk_usage}%")
     fi
@@ -198,7 +206,8 @@ generate_report() {
 
 # 保存指标到文件
 save_metrics() {
-    local timestamp=$(date +%s)
+    local timestamp
+    timestamp=$(date +%s)
     local metrics_file="$METRICS_DIR/history/metrics_$(date +%Y%m%d).log"
     
     {
@@ -215,22 +224,27 @@ save_metrics() {
 # 生成趋势报告
 generate_trend_report() {
     local days="${1:-7}"
-    local today=$(date +%Y%m%d)
+    local today
+    today=$(date +%Y%m%d)
     
     echo -e "${CYAN}性能趋势报告 (最近 $days 天)${NC}"
     echo ""
     
     for i in $(seq 0 $((days-1))); do
-        local date=$(date -d "$i days ago" +%Y%m%d)
+        local date
+        date=$(date -d "$i days ago" +%Y%m%d)
         local file="$METRICS_DIR/history/metrics_${date}.log"
         
         if [ -f "$file" ]; then
             echo -e "${BLUE}$(date -d "$i days ago" '+%Y-%m-%d')${NC}"
             
             # 计算平均值
-            local avg_cpu=$(grep "^cpu=" "$file" | sed 's/cpu=//' | awk '{sum+=$1} END {printf "%.1f", sum/NR}')
-            local avg_mem=$(grep "^mem=" "$file" | sed 's/mem=//' | awk '{sum+=$1} END {printf "%.1f", sum/NR}')
-            local avg_disk=$(grep "^disk=" "$file" | sed 's/disk=//' | awk '{sum+=$1} END {printf "%.1f", sum/NR}')
+            local avg_cpu
+            avg_cpu=$(grep "^cpu=" "$file" | sed 's/cpu=//' | awk '{sum+=$1} END {printf "%.1f", sum/NR}')
+            local avg_mem
+            avg_mem=$(grep "^mem=" "$file" | sed 's/mem=//' | awk '{sum+=$1} END {printf "%.1f", sum/NR}')
+            local avg_disk
+            avg_disk=$(grep "^disk=" "$file" | sed 's/disk=//' | awk '{sum+=$1} END {printf "%.1f", sum/NR}')
             
             echo -e "  CPU: ${avg_cpu}% | 内存: ${avg_mem}% | 磁盘: ${avg_disk}%"
         fi
