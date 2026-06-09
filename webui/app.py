@@ -1475,15 +1475,22 @@ def restart_webui():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # ==========================================
-# PostgreSQL 数据库连接
+# PostgreSQL 数据库连接（可选）
 # ==========================================
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    HAS_PSYCOPG2 = True
+except ImportError:
+    HAS_PSYCOPG2 = False
+
 from contextlib import contextmanager
 
 def get_pg_connection():
     """获取 PostgreSQL 数据库连接"""
+    if not HAS_PSYCOPG2:
+        return None
     try:
         conn = psycopg2.connect(
             host=WEBUI_CONFIG['db_host'],
@@ -1493,7 +1500,7 @@ def get_pg_connection():
             password=WEBUI_CONFIG['db_password']
         )
         return conn
-    except psycopg2.Error as e:
+    except Exception as e:
         logger.error(f'数据库连接失败: {e}')
         return None
 
@@ -1504,7 +1511,7 @@ def get_db_cursor():
     if not conn:
         yield None
         return
-    
+
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         yield cursor
@@ -1512,10 +1519,13 @@ def get_db_cursor():
     except Exception as e:
         conn.rollback()
         logger.error(f'数据库操作失败: {e}')
-        raise
+        yield None
     finally:
-        cursor.close()
-        conn.close()
+        try:
+            cursor.close()
+            conn.close()
+        except:
+            pass
 
 def init_pg_database():
     """初始化 PostgreSQL 数据库表"""
@@ -1523,10 +1533,10 @@ def init_pg_database():
     if not conn:
         logger.warning('无法连接到 PostgreSQL，将使用文件存储')
         return False
-    
+
     try:
         cursor = conn.cursor()
-        
+
         # 创建反馈表
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS feedbacks (
@@ -1541,7 +1551,7 @@ def init_pg_database():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        
+
         # 创建脚本表
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS scripts (
@@ -1563,19 +1573,25 @@ def init_pg_database():
                 rejected_at TIMESTAMP
             )
         ''')
-        
+
         conn.commit()
         logger.info('PostgreSQL 数据库表初始化完成')
         return True
-    except psycopg2.Error as e:
+    except Exception as e:
         logger.error(f'数据库表初始化失败: {e}')
         return False
     finally:
-        cursor.close()
-        conn.close()
+        try:
+            cursor.close()
+            conn.close()
+        except:
+            pass
 
 # 初始化数据库表
-init_pg_database()
+try:
+    init_pg_database()
+except Exception as e:
+    logger.warning(f'数据库初始化失败，使用文件存储: {e}')
 
 # ==========================================
 # 用户反馈与脚本上传 API

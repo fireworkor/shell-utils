@@ -202,7 +202,7 @@ check_and_install_command() {
     local cmd=$1
     local package=$2
     if ! command -v "$cmd" &> /dev/null; then
-        log_warning "安装 $cmd..."
+        log_warning "安装 $cmd ($package)..."
         local pkg_manager=""
         if command -v dnf &> /dev/null; then
             pkg_manager="dnf"
@@ -211,70 +211,118 @@ check_and_install_command() {
         elif command -v apt &> /dev/null; then
             pkg_manager="apt"
         fi
-        
+
         if [ -n "$pkg_manager" ]; then
             case $pkg_manager in
                 dnf|yum)
-                    $pkg_manager install -y "$package" 2>/dev/null
+                    $pkg_manager install -y "$package" >/dev/null 2>&1
                     ;;
                 apt)
                     export DEBIAN_FRONTEND=noninteractive
-                    apt update -qq 2>/dev/null
-                    apt install -y "$package" 2>/dev/null
+                    $pkg_manager update -qq >/dev/null 2>&1
+                    $pkg_manager install -y "$package" >/dev/null 2>&1
                     ;;
             esac
         fi
     fi
 }
 
+install_system_package() {
+    local package=$1
+    log_warning "安装系统依赖 $package..."
+    local pkg_manager=""
+    if command -v dnf &> /dev/null; then
+        pkg_manager="dnf"
+    elif command -v yum &> /dev/null; then
+        pkg_manager="yum"
+    elif command -v apt &> /dev/null; then
+        pkg_manager="apt"
+    fi
+
+    if [ -n "$pkg_manager" ]; then
+        case $pkg_manager in
+            dnf|yum)
+                $pkg_manager install -y "$package" >/dev/null 2>&1
+                ;;
+            apt)
+                export DEBIAN_FRONTEND=noninteractive
+                $pkg_manager update -qq >/dev/null 2>&1
+                $pkg_manager install -y "$package" >/dev/null 2>&1
+                ;;
+        esac
+    fi
+}
+
 # 安装依赖
 install_dependencies() {
     log_info "检查依赖..."
-    
+
     # 检查基础命令
     check_and_install_command python3 python3
+    check_and_install_command python3-pip python3-pip
     check_and_install_command curl curl
     check_and_install_command kill procps
     check_and_install_command mkdir coreutils
-    
+
+    # PostgreSQL 系统依赖（psycopg2 需要）
+    if command -v apt &> /dev/null; then
+        install_system_package "libpq-dev"
+        install_system_package "python3-dev"
+        install_system_package "build-essential"
+    elif command -v dnf &> /dev/null || command -v yum &> /dev/null; then
+        install_system_package "postgresql-devel"
+        install_system_package "python3-devel"
+    fi
+
     # 检查并安装 Python3-pip
     if ! python3 -m pip --version &> /dev/null; then
         log_warning "安装 python3-pip..."
-        local pkg_manager=""
-        if command -v dnf &> /dev/null; then
-            pkg_manager="dnf"
+        if command -v apt &> /dev/null; then
+            export DEBIAN_FRONTEND=noninteractive
+            apt update -qq >/dev/null 2>&1
+            apt install -y python3-pip >/dev/null 2>&1
+        elif command -v dnf &> /dev/null; then
+            dnf install -y python3-pip >/dev/null 2>&1
         elif command -v yum &> /dev/null; then
-            pkg_manager="yum"
-        elif command -v apt &> /dev/null; then
-            pkg_manager="apt"
+            yum install -y python3-pip >/dev/null 2>&1
         fi
-        
-        if [ -n "$pkg_manager" ]; then
-            case $pkg_manager in
-                dnf|yum)
-                    $pkg_manager install -y python3-pip 2>/dev/null
-                    ;;
-                apt)
-                    export DEBIAN_FRONTEND=noninteractive
-                    apt update -qq 2>/dev/null
-                    apt install -y python3-pip 2>/dev/null
-                    ;;
-            esac
-        fi
-        
+
         # 如果系统包管理器不行，尝试通过get-pip.py安装
         if ! python3 -m pip --version &> /dev/null; then
             log_warning "尝试通过 get-pip.py 安装..."
             curl -sSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
-            python3 /tmp/get-pip.py 2>/dev/null
+            python3 /tmp/get-pip.py >/dev/null 2>&1
             rm -f /tmp/get-pip.py
         fi
     fi
-    
-    # 检查并安装 Flask
-    if ! python3 -c "import flask" &> /dev/null; then
-        log_warning "安装 Flask 依赖..."
-        python3 -m pip install flask flask-socketio -q 2>/dev/null
+
+    # 使用 requirements.txt 安装所有 Python 依赖
+    if [ -f "$SCRIPT_DIR/requirements.txt" ]; then
+        log_warning "安装 Python 依赖包..."
+        python3 -m pip install --upgrade pip -q >/dev/null 2>&1
+        python3 -m pip install -r "$SCRIPT_DIR/requirements.txt" -q >/dev/null 2>&1
+
+        # 检查 psycopg2 是否安装成功
+        if ! python3 -c "import psycopg2" &> /dev/null; then
+            log_warning "psycopg2-binary 安装失败，尝试备用方案..."
+            # 优先使用系统包
+            if command -v apt &> /dev/null; then
+                install_system_package "python3-psycopg2"
+            elif command -v dnf &> /dev/null || command -v yum &> /dev/null; then
+                install_system_package "python3-psycopg2"
+            fi
+            # 再尝试 pip 安装
+            python3 -m pip install psycopg2-binary -q >/dev/null 2>&1
+        fi
+    else
+        # 退回到逐包安装
+        log_warning "未找到 requirements.txt，使用逐包安装..."
+        for pkg in "flask" "flask-socketio" "python-socketio" "eventlet" "psutil" "flasgger" "psycopg2-binary"; do
+            if ! python3 -c "import $pkg" &> /dev/null; then
+                log_warning "安装 $pkg..."
+                python3 -m pip install "$pkg" -q >/dev/null 2>&1
+            fi
+        done
     fi
 }
 
