@@ -39,31 +39,62 @@ REQUIRED_COMMANDS=(
 
 check_and_install_command() {
     local cmd=$1
-    if ! command -v "$cmd" &>/dev/null; then
-        echo -e "[${YELLOW}WARN${NC}] 命令 $cmd 未找到，正在安装..."
-        
-        # 检查操作系统
-        if [ -f /etc/centos-release ] || [ -f /etc/redhat-release ]; then
-            # CentOS/RHEL
-            if [ -x "$(command -v dnf)" ]; then
-                dnf install -y "$cmd"
-            else
-                yum install -y "$cmd"
-            fi
-        elif [ -f /etc/debian_version ] || [ -f /etc/lsb-release ]; then
-            # Ubuntu/Debian
-            apt update -y && apt install -y "$cmd"
+    
+    # 如果命令已存在，跳过
+    if command -v "$cmd" &>/dev/null; then
+        return 0
+    fi
+    
+    echo -e "[${YELLOW}WARN${NC}] 命令 $cmd 未找到，正在安装..."
+    
+    # Ubuntu/Debian 包名映射
+    case "$cmd" in
+        bc)
+            pkg_name="bc"
+            ;;
+        unzip)
+            pkg_name="unzip"
+            ;;
+        curl)
+            pkg_name="curl"
+            ;;
+        wget)
+            pkg_name="wget"
+            ;;
+        git)
+            pkg_name="git"
+            ;;
+        tar)
+            pkg_name="tar"
+            ;;
+        *)
+            pkg_name="$cmd"
+            ;;
+    esac
+    
+    # 检查操作系统
+    if [ -f /etc/centos-release ] || [ -f /etc/redhat-release ]; then
+        # CentOS/RHEL
+        if [ -x "$(command -v dnf)" ]; then
+            dnf install -y "$pkg_name"
         else
-            echo -e "[${RED}ERROR${NC}] 无法识别操作系统，无法自动安装 $cmd"
-            return 1
+            yum install -y "$pkg_name"
         fi
-        
-        if command -v "$cmd" &>/dev/null; then
-            echo -e "[${GREEN}OK${NC}] $cmd 安装成功"
-        else
-            echo -e "[${RED}ERROR${NC}] $cmd 安装失败，请手动安装"
-            return 1
-        fi
+    elif [ -f /etc/debian_version ] || [ -f /etc/lsb-release ]; then
+        # Ubuntu/Debian - 先更新软件源再安装
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -qq 2>/dev/null || apt update -y 2>/dev/null || true
+        apt-get install -y -qq "$pkg_name" 2>/dev/null || apt install -y "$pkg_name"
+    else
+        echo -e "[${RED}ERROR${NC}] 无法识别操作系统，无法自动安装 $cmd"
+        return 1
+    fi
+    
+    if command -v "$cmd" &>/dev/null; then
+        echo -e "[${GREEN}OK${NC}] $cmd 安装成功"
+    else
+        echo -e "[${RED}ERROR${NC}] $cmd 安装失败，请手动安装: sudo apt install $pkg_name"
+        return 1
     fi
 }
 
