@@ -1,0 +1,28 @@
+# MariaDB 备份配置文件示例
+# 将此文件复制为 config.conf 并根据实际情况修改
+
+# 数据库连接配置
+MARIADB_USER="root"
+MARIADB_PASSWORD="your_password_here"
+MARIADB_HOST="localhost"
+MARIADB_PORT="3306"
+
+# 备份配置
+BACKUP_ROOT="/var/backups/mariadb"
+INCREMENTAL_RETENTION=7
+FULL_RETENTION=30
+
+# 日志配置
+LOG_FILE="/var/log/mariadb_backup.log"
+
+# 二进制日志配置（增量备份需要）
+# 在 my.cnf 或 my.ini 中设置：
+# [mysqld]
+# log_bin = /var/log/mariadb/mariadb-bin
+# binlog_format = ROW
+# server_id = 1
+
+# 物理备份配置（mariabackup）
+# innodb_file_per_table = ON
+# innodb_flush_log_at_trx_commit = 1
+# innodb_log_file_size = 256M

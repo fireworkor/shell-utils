@@ -1,0 +1,33 @@
+# MongoDB 备份配置文件示例
+# 将此文件复制为 config.conf 并根据实际情况修改
+
+# 数据库连接配置
+MONGO_HOST="localhost"
+MONGO_PORT="27017"
+MONGO_USER="admin"
+MONGO_PASSWORD="your_password_here"
+
+# 备份配置
+BACKUP_ROOT="/var/backups/mongodb"
+INCREMENTAL_RETENTION=7
+FULL_RETENTION=30
+
+# 日志配置
+LOG_FILE="/var/log/mongodb_backup.log"
+
+# 副本集配置（增量备份需要）
+# 在 mongod.conf 中设置：
+# replication:
+#   replSetName: rs0
+
+# 初始化副本集命令：
+# rs.initiate({_id: "rs0", members: [{_id: 0, host: "localhost:27017"}]})
+
+# 安全配置（可选）
+# security:
+#   authorization: enabled
+
+# 网络配置
+# net:
+#   bindIp: 127.0.0.1
+#   port: 27017

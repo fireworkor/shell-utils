@@ -220,7 +220,7 @@ main() {
                 exit 1
             fi
             
-            read -p "是否继续更新? (yes/no): " confirm
+            read -rp "是否继续更新? (yes/no): " confirm
             if [ "$confirm" != "yes" ]; then
                 log_info "取消更新"
                 exit 0
@@ -246,7 +246,7 @@ main() {
             check_dependencies
             
             log_warn "强制更新，将覆盖所有修改！"
-            read -p "确认强制更新? (yes/no): " confirm
+            read -rp "确认强制更新? (yes/no): " confirm
             if [ "$confirm" != "yes" ]; then
                 log_info "取消更新"
                 exit 0
@@ -264,7 +264,7 @@ main() {
         
         rollback)
             local backup_dir
-            backup_dir=$(ls -dt "$SCRIPT_DIR/backup_"* 2>/dev/null | head -1)
+            backup_dir=$(find "$SCRIPT_DIR" -maxdepth 1 -type d -name "backup_*" 2>/dev/null | sort -r | head -1)
             
             if [ -z "$backup_dir" ]; then
                 log_error "没有找到备份目录"

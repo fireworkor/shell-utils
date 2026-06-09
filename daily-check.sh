@@ -52,13 +52,15 @@ log_section() {
 init_report() {
     mkdir -p "$REPORT_DIR"
     
-    echo "========================================" > "$REPORT_FILE"
-    echo "日常巡检报告" >> "$REPORT_FILE"
-    echo "检查时间: $(date '+%Y-%m-%d %H:%M:%S')" >> "$REPORT_FILE"
-    echo "主机名: $(hostname)" >> "$REPORT_FILE"
-    echo "操作系统: $(cat /etc/os-release | grep PRETTY_NAME | cut -d'"' -f2)" >> "$REPORT_FILE"
-    echo "内核版本: $(uname -r)" >> "$REPORT_FILE"
-    echo "========================================" >> "$REPORT_FILE"
+    {
+        echo "========================================"
+        echo "日常巡检报告"
+        echo "检查时间: $(date '+%Y-%m-%d %H:%M:%S')"
+        echo "主机名: $(hostname)"
+        echo "操作系统: $(grep PRETTY_NAME /etc/os-release | cut -d'"' -f2)"
+        echo "内核版本: $(uname -r)"
+        echo "========================================"
+    } > "$REPORT_FILE"
 }
 
 check_system_info() {
@@ -99,7 +101,7 @@ check_cpu_usage() {
     fi
     
     log_info "CPU 详情:"
-    top -bn1 | grep "Cpu(s)" | head -3 | while read line; do
+    top -bn1 | grep "Cpu(s)" | head -3 | while read -r line; do
         log_info "  $line"
         echo "  $line" >> "$REPORT_FILE"
     done
@@ -212,7 +214,7 @@ check_running_processes() {
     log_info "进程总数: $process_count"
     
     log_info "占用资源最高的进程:"
-    ps aux --sort=-%mem | head -6 | while read line; do
+    ps aux --sort=-%mem | head -6 | while read -r line; do
         echo "$line" | awk '{print "  " $11 " - CPU:" $3 "% MEM:" $4 "%"}'
         echo "$line" | awk '{print "  " $11 " - CPU:" $3 "% MEM:" $4 "%"}' >> "$REPORT_FILE"
     done
@@ -282,12 +284,12 @@ check_cron_jobs() {
     log_section "定时任务检查"
     
     local cron_count
-    cron_count=$(crontab -l 2>/dev/null | grep -v "^#" | grep -v "^$" | wc -l)
+    cron_count=$(crontab -l 2>/dev/null | grep -v "^#" | grep -c .)
     log_info "定时任务数量: $cron_count"
     
     if [ "$cron_count" -gt 0 ]; then
         log_info "定时任务列表:"
-        crontab -l 2>/dev/null | grep -v "^#" | grep -v "^$" | while read line; do
+        crontab -l 2>/dev/null | grep -v "^#" | grep -v "^$" | while read -r line; do
             log_info "  $line"
         done
         log_pass "定时任务检查完成"

@@ -1,0 +1,42 @@
+# InfluxDB 备份配置文件示例
+# 将此文件复制为 config.conf 并根据实际情况修改
+
+# InfluxDB 版本（1 或 2）
+INFLUX_VERSION="2"
+
+# 数据库连接配置
+INFLUX_HOST="localhost"
+INFLUX_PORT="8086"
+
+# InfluxDB 2.x 配置
+INFLUX_TOKEN="your_token_here"
+INFLUX_ORG="my-org"
+INFLUX_BUCKET="my-bucket"
+
+# InfluxDB 1.x 配置（如果使用 v1）
+# INFLUX_DB="mydb"
+# INFLUX_USER="admin"
+# INFLUX_PASSWORD="your_password_here"
+
+# 备份配置
+BACKUP_ROOT="/var/backups/influxdb"
+RETENTION_DAYS=30
+
+# 日志配置
+LOG_FILE="/var/log/influxdb_backup.log"
+
+# InfluxDB 2.x 配置文件（config.yml）示例
+# reporting-disabled: false
+# bind-address: ":8086"
+
+# InfluxDB 1.x 配置文件（influxdb.conf）示例
+# [http]
+#   enabled = true
+#   bind-address = ":8086"
+# [data]
+#   dir = "/var/lib/influxdb/data"
+#   wal-dir = "/var/lib/influxdb/wal"
+
+# 创建配置命令（InfluxDB 2.x）
+# influx setup --org my-org --bucket my-bucket --username admin --password your_password
+# influx auth create --org my-org --all-access

@@ -1,0 +1,28 @@
+# PostgreSQL 备份配置文件示例
+# 将此文件复制为 config.conf 并根据实际情况修改
+
+# 数据库连接配置
+PG_USER="postgres"
+PG_HOST="localhost"
+PG_PORT="5432"
+PG_DATABASE="postgres"
+
+# 备份配置
+BACKUP_ROOT="/var/backups/postgresql"
+INCREMENTAL_RETENTION=7
+FULL_RETENTION=30
+
+# 日志配置
+LOG_FILE="/var/log/postgresql_backup.log"
+
+# WAL 配置（增量备份需要）
+# 在 postgresql.conf 中设置：
+# wal_level = replica
+# archive_mode = on
+# archive_command = 'cp %p /var/lib/postgresql/archive/%f'
+
+# pg_hba.conf 配置（允许本地连接）
+# local   all             postgres                                peer
+# local   all             all                                     peer
+# host    all             all             127.0.0.1/32            scram-sha-256
+# host    all             all             ::1/128                 scram-sha-256

@@ -1,0 +1,31 @@
+# SQLite 备份配置文件示例
+# 将此文件复制为 config.conf 并根据实际情况修改
+
+# 数据库文件路径配置
+# 多个路径用空格分隔
+SQLITE_DB_PATHS="/var/lib/sqlite /opt/app/data"
+
+# 备份配置
+BACKUP_ROOT="/var/backups/sqlite"
+RETENTION_DAYS=30
+
+# 日志配置
+LOG_FILE="/var/log/sqlite_backup.log"
+
+# SQLite 数据库文件格式说明
+# 支持的文件扩展名：.db, .sqlite, .sqlite3, .db3
+
+# SQLite 连接示例（无需用户名密码）
+# sqlite3 /path/to/database.db
+
+# SQLite 常用命令
+# .backup /path/to/backup.db    - 备份数据库
+# .restore /path/to/backup.db   - 恢复数据库
+# .quit                         - 退出
+# .tables                       - 列出表
+# .schema tablename             - 查看表结构
+
+# 性能优化建议
+# PRAGMA journal_mode=WAL;      - 启用 WAL 模式
+# PRAGMA synchronous=NORMAL;    - 设置同步模式
+# PRAGMA cache_size=10000;      - 设置缓存大小

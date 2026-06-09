@@ -27,12 +27,13 @@
         .content { flex: 1; padding: 24px; overflow-y: auto; }
         
         /* 卡片样式 */
-        .card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 24px; margin-bottom: 24px; }
-        .card-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #2c3e50; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 24px; margin-bottom: 24px; border: 1px solid #ecf0f1; }
+        .card-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #2c3e50; padding-bottom: 12px; border-bottom: 2px solid #ecf0f1; }
         
         /* 状态卡片 */
         .status-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-        .status-card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .status-card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #ecf0f1; transition: transform 0.2s, box-shadow 0.2s; }
+        .status-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .status-card .value { font-size: 32px; font-weight: 700; color: #2c3e50; }
         .status-card .label { font-size: 14px; color: #7f8c8d; margin-top: 8px; }
         .status-card.success { border-left: 4px solid #27ae60; }
@@ -41,13 +42,14 @@
         .status-card.info { border-left: 4px solid #3498db; }
         
         /* 按钮样式 */
-        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; transition: opacity 0.2s; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s; }
+        .btn:hover { opacity: 0.9; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
         .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
         .btn-success { background: #27ae60; color: white; }
         .btn-warning { background: #f39c12; color: white; }
         .btn-danger { background: #e74c3c; color: white; }
         .btn-info { background: #3498db; color: white; }
-        .btn:hover { opacity: 0.9; }
         
         /* 表格样式 */
         .table { width: 100%; border-collapse: collapse; }
@@ -60,13 +62,15 @@
         .status-active { background: #d4edda; color: #155724; }
         .status-inactive { background: #f8d7da; color: #721c24; }
         .status-unknown { background: #e2e3e5; color: #383d41; }
+        .status-info { background: #d1ecf1; color: #0c5460; }
         
         /* 输出区域 */
         .output-box { background: #1e272e; color: #ecf0f1; padding: 16px; border-radius: 4px; font-family: 'Monaco', 'Menlo', monospace; font-size: 13px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
         
         /* 软件列表 */
         .software-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
-        .software-card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; }
+        .software-card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #ecf0f1; text-align: center; transition: transform 0.2s, box-shadow 0.2s; }
+        .software-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .software-card .name { font-size: 16px; font-weight: 600; color: #2c3e50; margin-bottom: 8px; }
         .software-card .version { font-size: 14px; color: #7f8c8d; margin-bottom: 12px; }
         .software-card .status { margin-bottom: 12px; }
@@ -74,10 +78,11 @@
         /* 模态框 */
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
         .modal.show { display: flex; }
-        .modal-content { background: white; border-radius: 8px; padding: 24px; width: 90%; max-width: 500px; }
-        .modal-header { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+        .modal-content { background: white; border-radius: 8px; padding: 24px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .modal-header { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #2c3e50; display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 2px solid #ecf0f1; }
         .modal-body { margin-bottom: 20px; }
         .modal-footer { display: flex; justify-content: flex-end; gap: 12px; }
+        .modal-header > span { font-size: 18px; font-weight: 600; }
         
         /* 进度条 */
         .progress { height: 8px; background: #ecf0f1; border-radius: 4px; overflow: hidden; }
@@ -214,6 +219,15 @@
             <div class="menu-item" onclick="showPage('settings')">
                 <i>⚙️</i> WebUI 配置
             </div>
+            <div class="menu-item" onclick="showPage('feedback')">
+                <i>💬</i> 用户反馈
+            </div>
+            <div class="menu-item" onclick="showPage('script-upload')">
+                <i>📤</i> 脚本上传
+            </div>
+            <div class="menu-item" onclick="showPage('script-review')">
+                <i>✅</i> 脚本审核
+            </div>
             <div class="menu-item" onclick="showPage('system-tools')">
                 <i>🛠️</i> 系统管理
             </div>
@@ -301,10 +315,19 @@
             <div id="page-services" class="page" style="display:none">
                 <div class="card">
                     <div class="card-title">⚙️ 服务管理</div>
-                    <div style="margin-bottom:12px;">
+                    <div style="margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
                         <input type="text" id="service-search" placeholder="搜索服务..." 
-                               style="padding:8px;width:250px;margin-right:12px;" oninput="filterServices()">
+                               style="padding:8px;width:250px;" oninput="filterServices()">
                         <button class="btn btn-primary" onclick="loadServices()">刷新</button>
+                        <span style="font-size:13px;color:#7f8c8d;margin-left:auto;">每页</span>
+                        <select id="services-page-size" onchange="renderServicesPage(1)" style="padding:6px;">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="30">30</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span style="font-size:13px;color:#7f8c8d;">条</span>
                     </div>
                     <table class="table">
                         <thead>
@@ -353,6 +376,17 @@
                 <div class="card">
                     <div class="card-title">📖 软件使用说明</div>
                     <p style="color:#7f8c8d;font-size:13px;margin-bottom:12px;">管理各软件的端口、账号密码、配置路径等信息</p>
+                    <div style="margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
+                        <span style="font-size:13px;color:#7f8c8d;">每页</span>
+                        <select id="software-info-page-size" onchange="renderSoftwareInfoPage(1)" style="padding:6px;">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="30">30</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span style="font-size:13px;color:#7f8c8d;">条</span>
+                    </div>
                     <table class="table">
                         <thead>
                             <tr>
@@ -414,48 +448,99 @@
             
             <!-- 备份恢复 -->
             <div id="page-backup" class="page" style="display:none">
+                <!-- 备份操作 -->
                 <div class="card">
                     <div class="card-title">💾 数据备份</div>
-                    <div>
-                        <select id="backup-target" style="padding: 10px; width: 200px; margin-right: 12px;">
-                            <option value="all">全部备份</option>
-                            <option value="mysql">MySQL</option>
-                            <option value="mongodb">MongoDB</option>
-                            <option value="redis">Redis</option>
-                            <option value="configs">配置文件</option>
-                        </select>
-                        <button class="btn btn-primary" onclick="runBackup()">执行备份</button>
+                    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;">
+                        <div style="display:flex;flex-direction:column;">
+                            <label style="font-size:13px;color:#7f8c8d;margin-bottom:6px;">选择数据库</label>
+                            <select id="backup-target" style="padding: 10px; width: 180px;">
+                                <option value="all">📦 全部数据库</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;flex-direction:column;">
+                            <label style="font-size:13px;color:#7f8c8d;margin-bottom:6px;">备份类型</label>
+                            <select id="backup-type" style="padding: 10px; width: 150px;" onchange="updateBackupTypeDescription()">
+                                <option value="incremental">📊 增量备份</option>
+                                <option value="full">📦 全量备份</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;flex-direction:column;justify-content:flex-end;">
+                            <button class="btn btn-primary" onclick="runBackup()">🚀 执行备份</button>
+                        </div>
+                        <div style="display:flex;flex-direction:column;justify-content:flex-end;">
+                            <button class="btn btn-warning" onclick="runBackupCleanup()">🗑️ 清理旧备份</button>
+                        </div>
                     </div>
-                    <pre class="output-box" id="backup-output" style="margin-top: 16px;">选择备份目标并点击按钮...</pre>
+                    <div id="backup-type-description" style="background:#e8f5e9;padding:12px;border-radius:4px;margin-bottom:16px;font-size:13px;color:#2e7d32;">
+                        增量备份：仅备份变更的数据，速度快，适合日常备份
+                    </div>
+                    <pre class="output-box" id="backup-output" style="max-height:300px;">选择备份目标和类型后点击执行备份...</pre>
                 </div>
                 
+                <!-- 备份文件列表 -->
                 <div class="card">
                     <div class="card-title">📂 备份文件列表</div>
-                    <button class="btn btn-primary" onclick="loadBackupList()" style="margin-bottom: 12px;">刷新列表</button>
+                    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px;">
+                        <select id="backup-filter-db" style="padding:8px;width:150px;" onchange="filterBackupList()">
+                            <option value="all">全部数据库</option>
+                        </select>
+                        <select id="backup-filter-type" style="padding:8px;width:120px;" onchange="filterBackupList()">
+                            <option value="all">全部类型</option>
+                            <option value="incremental">增量备份</option>
+                            <option value="full">全量备份</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="loadBackupList()" style="margin-left:auto;">🔄 刷新列表</button>
+                    </div>
                     <div id="backup-list-container">
                         <table class="table">
                             <thead>
-                                <tr><th>类型</th><th>文件名</th><th>大小</th><th>时间</th><th>操作</th></tr>
+                                <tr><th>数据库</th><th>备份类型</th><th>文件名</th><th>大小</th><th>时间</th><th>操作</th></tr>
                             </thead>
                             <tbody id="backup-list-body">
-                                <tr><td colspan="5" style="text-align:center;color:#7f8c8d;">点击"刷新列表"加载备份文件</td></tr>
+                                <tr><td colspan="6" style="text-align:center;color:#7f8c8d;">点击"刷新列表"加载备份文件</td></tr>
                             </tbody>
                         </table>
                     </div>
+                    <div id="backup-list-pagination" class="pagination"></div>
                 </div>
                 
+                <!-- 数据恢复 -->
                 <div class="card">
                     <div class="card-title">🔄 数据恢复</div>
-                    <div>
-                        <select id="restore-target" style="padding: 10px; width: 200px; margin-right: 12px;">
-                            <option value="mysql">MySQL</option>
-                            <option value="mongodb">MongoDB</option>
-                            <option value="redis">Redis</option>
-                        </select>
-                        <input type="text" id="restore-file" placeholder="备份文件路径" style="padding: 10px; width: 400px; margin-right: 12px;">
-                        <button class="btn btn-warning" onclick="runRestore()">执行恢复</button>
+                    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;">
+                        <div style="display:flex;flex-direction:column;">
+                            <label style="font-size:13px;color:#7f8c8d;margin-bottom:6px;">选择数据库</label>
+                            <select id="restore-target" style="padding: 10px; width: 180px;">
+                                <option value="">请选择数据库</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;flex-direction:column;flex:1;min-width:200px;">
+                            <label style="font-size:13px;color:#7f8c8d;margin-bottom:6px;">备份文件</label>
+                            <input type="text" id="restore-file" placeholder="输入备份文件路径或从列表选择" 
+                                   style="padding: 10px; width: 100%;max-width:500px;">
+                        </div>
+                        <div style="display:flex;flex-direction:column;justify-content:flex-end;">
+                            <button class="btn btn-warning" onclick="runRestore()">🔄 执行恢复</button>
+                        </div>
                     </div>
-                    <pre class="output-box" id="restore-output" style="margin-top: 16px;">选择恢复目标、输入备份文件路径后点击恢复...</pre>
+                    <div style="background:#fff3e0;padding:12px;border-radius:4px;margin-bottom:16px;font-size:13px;color:#ef6c00;">
+                        <strong>⚠️ 注意：</strong>恢复操作将覆盖现有数据，请确保已做好充分备份
+                    </div>
+                    <pre class="output-box" id="restore-output" style="max-height:300px;">选择恢复目标和备份文件后点击恢复...</pre>
+                </div>
+                
+                <!-- 备份配置管理 -->
+                <div class="card">
+                    <div class="card-title">⚙️ 备份配置</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;">
+                        <select id="config-db-select" style="padding:10px;width:180px;">
+                            <option value="">选择数据库查看配置</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="loadBackupConfig()">📋 查看配置</button>
+                        <button class="btn btn-info" onclick="loadBackupLog()">📝 查看日志</button>
+                    </div>
+                    <pre class="output-box" id="backup-config-output" style="max-height:400px;">选择数据库后查看配置示例...</pre>
                 </div>
             </div>
             
@@ -547,6 +632,156 @@
                 </div>
             </div>
             
+            <!-- 用户反馈 -->
+            <div id="page-feedback" class="page" style="display:none">
+                <div class="card">
+                    <div class="card-title">💬 用户反馈</div>
+                    <p style="color:#7f8c8d;font-size:13px;margin-bottom:16px;">提交 Bug 报告、功能建议或其他反馈，帮助我们改进系统</p>
+                    
+                    <div style="display:grid;gap:16px;max-width:600px;">
+                        <div>
+                            <label style="display:block;margin-bottom:6px;font-weight:500;">反馈类型</label>
+                            <select id="feedback-type" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:4px;">
+                                <option value="bug">🐛 Bug 报告</option>
+                                <option value="feature">💡 功能建议</option>
+                                <option value="other">📝 其他反馈</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label style="display:block;margin-bottom:6px;font-weight:500;">优先级</label>
+                            <select id="feedback-priority" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:4px;">
+                                <option value="low">低</option>
+                                <option value="normal" selected>普通</option>
+                                <option value="high">高</option>
+                                <option value="critical">紧急</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label style="display:block;margin-bottom:6px;font-weight:500;">标题 *</label>
+                            <input type="text" id="feedback-title" placeholder="简要描述问题或建议" 
+                                   style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:4px;">
+                        </div>
+                        
+                        <div>
+                            <label style="display:block;margin-bottom:6px;font-weight:500;">详细描述 *</label>
+                            <textarea id="feedback-description" rows="6" placeholder="请详细描述您遇到的问题或建议，包括复现步骤、期望结果等"
+                                      style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:4px;resize:vertical;"></textarea>
+                        </div>
+                        
+                        <div>
+                            <label style="display:block;margin-bottom:6px;font-weight:500;">联系方式 (可选)</label>
+                            <input type="text" id="feedback-contact" placeholder="邮箱或其他联系方式" 
+                                   style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:4px;">
+                        </div>
+                        
+                        <div>
+                            <button class="btn btn-primary" onclick="submitFeedback()">📤 提交反馈</button>
+                            <button class="btn" onclick="clearFeedbackForm()">🗑️ 清空表单</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">📋 我的反馈记录</div>
+                    <div style="margin-bottom:12px;">
+                        <button class="btn btn-primary" onclick="loadFeedbackList()">🔄 刷新列表</button>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr><th>ID</th><th>类型</th><th>标题</th><th>优先级</th><th>状态</th><th>提交时间</th></tr>
+                        </thead>
+                        <tbody id="feedback-list">
+                            <tr><td colspan="6" style="text-align:center;color:#7f8c8d;">点击刷新加载反馈列表</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 脚本上传 -->
+            <div id="page-script-upload" class="page" style="display:none">
+                <div class="card">
+                    <div class="card-title">📤 上传安装脚本</div>
+                    <p style="color:#7f8c8d;font-size:13px;margin-bottom:16px;">分享您的软件安装脚本，经审核后将合并到主分支供所有用户使用</p>
+                    
+                    <div style="display:grid;gap:16px;max-width:600px;">
+                        <div>
+                            <label style="display:block;margin-bottom:6px;font-weight:500;">脚本名称 *</label>
+                            <input type="text" id="script-name" placeholder="例如: nginx, mysql, redis" 
+                                   style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:4px;">
+                        </div>
+                        
+                        <div>
+                            <label style="display:block;margin-bottom:6px;font-weight:500;">脚本分类</label>
+                            <select id="script-category" style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:4px;">
+                                <option value="middleware">中间件</option>
+                                <option value="database">数据库</option>
+                                <option value="language">编程语言</option>
+                                <option value="tool">工具</option>
+                                <option value="monitor">监控</option>
+                                <option value="other">其他</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label style="display:block;margin-bottom:6px;font-weight:500;">脚本描述</label>
+                            <textarea id="script-description" rows="3" placeholder="简要描述脚本功能和安装内容"
+                                      style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:4px;resize:vertical;"></textarea>
+                        </div>
+                        
+                        <div>
+                            <label style="display:block;margin-bottom:6px;font-weight:500;">作者</label>
+                            <input type="text" id="script-author" placeholder="您的名字或昵称" 
+                                   style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:4px;">
+                        </div>
+                        
+                        <div>
+                            <label style="display:block;margin-bottom:6px;font-weight:500;">联系方式 (可选)</label>
+                            <input type="text" id="script-contact" placeholder="邮箱或其他联系方式" 
+                                   style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:4px;">
+                        </div>
+                        
+                        <div>
+                            <label style="display:block;margin-bottom:6px;font-weight:500;">脚本文件 (.sh) *</label>
+                            <input type="file" id="script-file" accept=".sh" 
+                                   style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:4px;">
+                        </div>
+                        
+                        <div style="background:#fff3cd;padding:12px;border-radius:4px;font-size:13px;">
+                            <strong>⚠️ 注意事项：</strong>
+                            <ul style="margin:8px 0 0 20px;padding:0;">
+                                <li>脚本必须是 Bash Shell 脚本 (.sh)</li>
+                                <li>脚本应包含错误处理和日志输出</li>
+                                <li>上传后需要管理员审核才能生效</li>
+                                <li>请确保脚本安全可靠，不包含恶意代码</li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <button class="btn btn-primary" onclick="uploadScript()">📤 上传脚本</button>
+                            <button class="btn" onclick="clearScriptForm()">🗑️ 清空表单</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 脚本审核 -->
+            <div id="page-script-review" class="page" style="display:none">
+                <div class="card">
+                    <div class="card-title">✅ 脚本审核管理</div>
+                    <p style="color:#7f8c8d;font-size:13px;margin-bottom:16px;">审核用户上传的脚本，批准后自动安装到系统中</p>
+                    
+                    <div style="margin-bottom:12px;">
+                        <button class="btn btn-primary" onclick="loadPendingScripts()">🔄 刷新列表</button>
+                    </div>
+                    
+                    <div id="pending-scripts-list">
+                        <p style="color:#7f8c8d;text-align:center;padding:20px;">点击刷新加载待审核脚本</p>
+                    </div>
+                </div>
+            </div>
+            
             <!-- 系统管理 -->
             <div id="page-system-tools" class="page" style="display:none">
                 <div class="card">
@@ -579,24 +814,7 @@
                     <div id="disk-status" class="output-box">点击"检查磁盘"查看磁盘状态</div>
                 </div>
             </div>
-        </div>
-    </div>
-    
-    <!-- 模态框 -->
-    <div class="modal" id="modal">
-        <div class="modal-content" id="modal-box">
-            <div class="modal-header" id="modal-title" style="display:flex;justify-content:space-between;align-items:center;">
-                <span id="modal-title-text"></span>
-                <div>
-                    <button class="btn" id="modal-minimize-btn" onclick="minimizeModal()" style="padding:4px 10px;font-size:12px;display:none;margin-right:8px;">最小化</button>
-                    <button class="btn" onclick="closeModal()" style="padding:4px 10px;font-size:12px;">✕</button>
-                </div>
-            </div>
-            <div class="modal-body" id="modal-body"></div>
-            <div class="modal-footer" id="modal-footer">
-                <button class="btn btn-primary" onclick="closeModal()">确定</button>
-            </div>
-            
+
             <!-- WebUI 配置 -->
             <div id="page-settings" class="page" style="display:none">
                 <div class="card">
@@ -676,10 +894,90 @@
                         </tbody>
                     </table>
                 </div>
+                
+                <div class="card">
+                    <div class="card-title">🌐 域名配置</div>
+                    <p style="color:#7f8c8d;font-size:13px;margin-bottom:16px;">配置 WebUI 的访问域名，用于脚本上传反馈链接和外部访问</p>
+                    
+                    <div style="display:grid;gap:16px;max-width:600px;">
+                        <div>
+                            <label style="display:block;margin-bottom:6px;font-weight:500;">WebUI 域名</label>
+                            <input type="text" id="webui-domain" placeholder="例如: https://ops.example.com" 
+                                   style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:4px;">
+                            <small style="color:#7f8c8d;font-size:12px;margin-top:4px;display:block;">
+                                完整的访问地址，包含协议 (http/https)
+                            </small>
+                        </div>
+                        
+                        <div>
+                            <label style="display:block;margin-bottom:6px;font-weight:500;">Git 仓库地址 (可选)</label>
+                            <input type="text" id="git-repo-url" placeholder="例如: https://github.com/user/repo" 
+                                   style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:4px;">
+                            <small style="color:#7f8c8d;font-size:12px;margin-top:4px;display:block;">
+                                用于脚本合并的主仓库地址
+                            </small>
+                        </div>
+                        
+                        <div>
+                            <label style="display:block;margin-bottom:6px;font-weight:500;">管理员邮箱 (可选)</label>
+                            <input type="email" id="admin-email" placeholder="例如: admin@example.com" 
+                                   style="width:100%;padding:10px;border:1px solid #dee2e6;border-radius:4px;">
+                            <small style="color:#7f8c8d;font-size:12px;margin-top:4px;display:block;">
+                                用于接收审核通知和用户反馈
+                            </small>
+                        </div>
+                        
+                        <div>
+                            <button class="btn btn-primary" onclick="saveDomainConfig()">💾 保存域名配置</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">📊 统计信息</div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;">
+                        <div style="background:#e8f5e9;padding:16px;border-radius:4px;text-align:center;">
+                            <div style="font-size:24px;font-weight:bold;color:#2e7d32;" id="stat-feedback-count">0</div>
+                            <div style="font-size:12px;color:#7f8c8d;">反馈总数</div>
+                        </div>
+                        <div style="background:#fff3e0;padding:16px;border-radius:4px;text-align:center;">
+                            <div style="font-size:24px;font-weight:bold;color:#ef6c00;" id="stat-pending-scripts">0</div>
+                            <div style="font-size:12px;color:#7f8c8d;">待审核脚本</div>
+                        </div>
+                        <div style="background:#e3f2fd;padding:16px;border-radius:4px;text-align:center;">
+                            <div style="font-size:24px;font-weight:bold;color:#1976d2;" id="stat-approved-scripts">0</div>
+                            <div style="font-size:12px;color:#7f8c8d;">已通过脚本</div>
+                        </div>
+                        <div style="background:#fce4ec;padding:16px;border-radius:4px;text-align:center;">
+                            <div style="font-size:24px;font-weight:bold;color:#c2185b;" id="stat-software-count">0</div>
+                            <div style="font-size:12px;color:#7f8c8d;">软件总数</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:12px;">
+                        <button class="btn btn-primary" onclick="loadStatistics()">🔄 刷新统计</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    
+
+    <!-- 模态框 -->
+    <div class="modal" id="modal">
+        <div class="modal-content" id="modal-box">
+            <div class="modal-header" id="modal-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span id="modal-title-text"></span>
+                <div>
+                    <button class="btn" id="modal-minimize-btn" onclick="minimizeModal()" style="padding:4px 10px;font-size:12px;display:none;margin-right:8px;">最小化</button>
+                    <button class="btn" onclick="closeModal()" style="padding:4px 10px;font-size:12px;">✕</button>
+                </div>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer" id="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal()">确定</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 最小化日志悬浮窗 -->
     <div id="minimized-logs" style="display:none;position:fixed;bottom:20px;right:20px;z-index:999;">
         <div id="minimized-log-items"></div>
@@ -693,8 +991,10 @@
         let currentInstallTask = null;
         let allServicesData = [];
         let installTasks = {};  // task_id -> {software, status}
+        let installLogs = {};   // task_id -> [lines] for restore
         let minimizedTasks = {}; // task_id -> {title, status}
         let allSoftwareInfoData = [];
+        let currentEditSoftware = null;
         
         // 手机端菜单切换
         function toggleMobileMenu() {
@@ -737,6 +1037,8 @@
                 });
                 
                 socket.on('install_log', function(data) {
+                    if (!installLogs[data.task_id]) installLogs[data.task_id] = [];
+                    installLogs[data.task_id].push(data.line);
                     if (currentInstallTask === data.task_id) {
                         const output = document.getElementById('install-log-output');
                         if (output) {
@@ -793,6 +1095,11 @@
             if (page === 'system') loadSystemInfo();
             if (page === 'services') loadServices();
             if (page === 'software') loadSoftwareList();
+            if (page === 'backup') {
+                loadBackupDatabases();
+                loadBackupList();
+                updateBackupTypeDescription();
+            }
         }
         
         function loadDashboard() {
@@ -933,7 +1240,7 @@
             const search = (document.getElementById('service-search').value || '').toLowerCase();
             const filtered = search ? data.filter(s => s.name.toLowerCase().includes(search)) : data;
             
-            const pageSize = 10;
+            const pageSize = parseInt(document.getElementById('services-page-size').value) || 10;
             const start = (page - 1) * pageSize;
             const pageData = filtered.slice(start, start + pageSize);
             const tableBody = document.getElementById('services-body');
@@ -1119,16 +1426,16 @@
         function restoreFromMinimized(taskId) {
             const task = minimizedTasks[taskId];
             if (!task) return;
-            
+
             // 恢复模态框
-            const logs = install_logs_global?.[taskId] || [];
-            const logContent = logs.length > 0 
-                ? logs.join('\n') 
+            const logs = installLogs[taskId] || [];
+            const logContent = logs.length > 0
+                ? logs.join('\n')
                 : (task.status === 'running' ? '任务执行中...' : '任务已完成');
-            
+
             showModal(task.title, '<pre class="output-box" id="install-log-output" style="max-height:400px;">' + logContent + '\n</pre>', true);
             currentInstallTask = taskId;
-            
+
             delete minimizedTasks[taskId];
             updateMinimizedLogs();
         }
@@ -1222,7 +1529,7 @@
             const grid = document.getElementById('software-info-grid');
             if (!grid) return;
             
-            const pageSize = 10;
+            const pageSize = parseInt(document.getElementById('software-info-page-size').value) || 10;
             const start = (page - 1) * pageSize;
             const pageData = data.slice(start, start + pageSize);
             
@@ -1253,7 +1560,8 @@
                 showModal('错误', '未找到软件信息');
                 return;
             }
-            
+            currentEditSoftware = name;
+
             const formHtml = `
                 <div style="max-height:500px;overflow-y:auto;">
                     <table style="width:100%;border-collapse:collapse;">
@@ -1314,18 +1622,9 @@
         }
         
         function saveSoftwareInfo() {
-            const name = document.querySelector('#modal-title-text').textContent.replace('编辑软件信息 - ', '');
-            // 从缓存中获取原始name
-            let originalName = '';
-            for (const [key, val] of Object.entries(softwareInfoCache)) {
-                if ((val.display_name || val.name) === name) {
-                    originalName = key;
-                    break;
-                }
-            }
-            
+            const originalName = currentEditSoftware;
             if (!originalName) return;
-            
+
             const data = {
                 display_name: document.getElementById('edit-sw-name').value,
                 ports: document.getElementById('edit-sw-ports').value,
@@ -1336,7 +1635,7 @@
                 description: document.getElementById('edit-sw-desc').value,
                 notes: document.getElementById('edit-sw-notes').value,
             };
-            
+
             fetch(`/api/software/info/${originalName}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -1344,6 +1643,7 @@
             }).then(r => r.json()).then(result => {
                 if (result.success) {
                     closeModal();
+                    currentEditSoftware = null;
                     loadSoftwareInfo();
                 } else {
                     alert('保存失败');
@@ -1405,52 +1705,159 @@
             });
         }
         
+        let backupListData = [];
+
+        function loadBackupDatabases() {
+            fetch('/api/backup/databases').then(r => r.json()).then(data => {
+                if (!data.success) return;
+                
+                const backupTarget = document.getElementById('backup-target');
+                const restoreTarget = document.getElementById('restore-target');
+                const filterDb = document.getElementById('backup-filter-db');
+                const configDbSelect = document.getElementById('config-db-select');
+                
+                backupTarget.innerHTML = '<option value="all">📦 全部数据库</option>';
+                restoreTarget.innerHTML = '<option value="">请选择数据库</option>';
+                filterDb.innerHTML = '<option value="all">全部数据库</option>';
+                configDbSelect.innerHTML = '<option value="">选择数据库查看配置</option>';
+                
+                data.data.forEach(db => {
+                    if (db.name !== 'all') {
+                        backupTarget.innerHTML += `<option value="${db.name}">${db.icon} ${db.label}</option>`;
+                        restoreTarget.innerHTML += `<option value="${db.name}">${db.icon} ${db.label}</option>`;
+                        filterDb.innerHTML += `<option value="${db.name}">${db.label}</option>`;
+                        configDbSelect.innerHTML += `<option value="${db.name}">${db.icon} ${db.label}</option>`;
+                    }
+                });
+            });
+        }
+
+        function updateBackupTypeDescription() {
+            const type = document.getElementById('backup-type').value;
+            const desc = document.getElementById('backup-type-description');
+            
+            if (type === 'incremental') {
+                desc.textContent = '增量备份：仅备份变更的数据，速度快，适合日常备份';
+                desc.style.background = '#e8f5e9';
+                desc.style.color = '#2e7d32';
+            } else {
+                desc.textContent = '全量备份：备份全部数据，数据完整，适合定期完整备份（建议每30天执行一次）';
+                desc.style.background = '#e3f2fd';
+                desc.style.color = '#1976d2';
+            }
+        }
+
         function runBackup() {
             const target = document.getElementById('backup-target').value;
+            const backupType = document.getElementById('backup-type').value;
             const output = document.getElementById('backup-output');
-            output.textContent = `正在备份 ${target}...`;
+            
+            const typeText = backupType === 'incremental' ? '增量备份' : '全量备份';
+            const targetText = target === 'all' ? '全部数据库' : target;
+            
+            output.textContent = `正在执行 ${typeText} (${targetText})...\n`;
             
             fetch('/api/backup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target, type: backupType })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    output.textContent += data.output;
+                } else {
+                    output.textContent += '❌ 备份失败: ' + (data.error || '未知错误');
+                }
+                loadBackupList();
+            }).catch(err => {
+                output.textContent += '❌ 请求失败: ' + err.message;
+            });
+        }
+
+        function runBackupCleanup() {
+            const target = document.getElementById('backup-target').value;
+            const output = document.getElementById('backup-output');
+            const targetText = target === 'all' ? '全部数据库' : target;
+            
+            if (!confirm(`确定要清理 ${targetText} 的旧备份吗？`)) return;
+            
+            output.textContent = `正在清理 ${targetText} 的旧备份...\n`;
+            
+            fetch('/api/backup/cleanup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ target })
             }).then(r => r.json()).then(data => {
-                output.textContent = data.output + (data.error ? '\n错误: ' + data.error : '');
-                if (data.success) loadBackupList();
+                if (data.success) {
+                    output.textContent += data.output;
+                } else {
+                    output.textContent += '❌ 清理失败: ' + (data.error || '未知错误');
+                }
+                loadBackupList();
             });
         }
         
         function loadBackupList() {
             const tableBody = document.getElementById('backup-list-body');
-            tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#7f8c8d;">加载中...</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#7f8c8d;">加载中...</td></tr>';
             
             fetch('/api/backup/list').then(r => r.json()).then(data => {
                 if (!data.success || !data.data) {
-                    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#7f8c8d;">无备份文件</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#7f8c8d;">无备份文件</td></tr>';
                     return;
                 }
                 
-                tableBody.innerHTML = '';
-                for (const [type, files] of Object.entries(data.data)) {
-                    files.forEach(file => {
-                        tableBody.innerHTML += `
-                            <tr>
-                                <td><span class="status-badge status-active">${type}</span></td>
-                                <td style="font-size:12px;word-break:break-all;">${file.name}</td>
-                                <td>${file.size} KB</td>
-                                <td>${file.time}</td>
-                                <td>
-                                    <button class="btn btn-warning" style="padding:4px 10px;font-size:12px;" 
-                                        onclick="selectRestore('${type}', '${file.path}')">选择恢复</button>
-                                </td>
-                            </tr>`;
-                    });
-                }
-                
-                if (!tableBody.innerHTML) {
-                    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#7f8c8d;">无备份文件</td></tr>';
-                }
+                backupListData = data.data;
+                renderBackupListPage(1);
             });
+        }
+
+        function renderBackupListPage(page) {
+            const filterDb = document.getElementById('backup-filter-db').value;
+            const filterType = document.getElementById('backup-filter-type').value;
+            
+            let filtered = backupListData;
+            if (filterDb !== 'all') {
+                filtered = filtered.filter(item => item.db_type === filterDb);
+            }
+            if (filterType !== 'all') {
+                filtered = filtered.filter(item => item.backup_type === filterType);
+            }
+            
+            const pageSize = 10;
+            const start = (page - 1) * pageSize;
+            const pageData = filtered.slice(start, start + pageSize);
+            
+            const tableBody = document.getElementById('backup-list-body');
+            tableBody.innerHTML = '';
+            
+            if (pageData.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#7f8c8d;">无匹配的备份文件</td></tr>';
+                document.getElementById('backup-list-pagination').innerHTML = '';
+                return;
+            }
+            
+            pageData.forEach(item => {
+                const typeIcon = item.backup_type === 'incremental' ? '📊' : '📦';
+                const typeLabel = item.backup_type === 'incremental' ? '增量' : '全量';
+                tableBody.innerHTML += `
+                    <tr>
+                        <td><span class="status-badge status-active">${item.db_label}</span></td>
+                        <td><span class="status-badge ${item.backup_type === 'incremental' ? 'status-info' : 'status-success'}">${typeIcon} ${typeLabel}</span></td>
+                        <td style="font-size:12px;word-break:break-all;">${item.name}</td>
+                        <td>${item.size}</td>
+                        <td>${item.time}</td>
+                        <td>
+                            <button class="btn btn-warning" style="padding:4px 10px;font-size:12px;" 
+                                onclick="selectRestore('${item.db_type}', '${item.path}')">选择恢复</button>
+                        </td>
+                    </tr>`;
+            });
+            
+            renderPagination('backup-list-pagination', filtered.length, page, pageSize, 'renderBackupListPage');
+        }
+
+        function filterBackupList() {
+            renderBackupListPage(1);
         }
         
         function selectRestore(type, filePath) {
@@ -1464,23 +1871,67 @@
             const backupFile = document.getElementById('restore-file').value;
             const output = document.getElementById('restore-output');
             
+            if (!target) {
+                showModal('错误', '请选择要恢复的数据库类型');
+                return;
+            }
+            
             if (!backupFile) {
                 showModal('错误', '请输入或选择备份文件路径');
                 return;
             }
             
-            if (!confirm('确定要恢复数据吗？此操作可能会覆盖现有数据！')) {
+            if (!confirm('⚠️ 警告：确定要恢复数据吗？此操作可能会覆盖现有数据！')) {
                 return;
             }
             
-            output.textContent = `正在恢复 ${target}...`;
+            output.textContent = `正在恢复 ${target}...\n`;
             
             fetch('/api/restore', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ target: target, backup_file: backupFile })
             }).then(r => r.json()).then(data => {
-                output.textContent = data.output + (data.error ? '\n错误: ' + data.error : '');
+                if (data.success) {
+                    output.textContent += data.output;
+                } else {
+                    output.textContent += '❌ 恢复失败: ' + (data.error || '未知错误');
+                }
+            }).catch(err => {
+                output.textContent += '❌ 请求失败: ' + err.message;
+            });
+        }
+
+        function loadBackupConfig() {
+            const dbType = document.getElementById('config-db-select').value;
+            const output = document.getElementById('backup-config-output');
+            
+            if (!dbType) {
+                output.textContent = '请选择要查看配置的数据库';
+                return;
+            }
+            
+            output.textContent = `正在加载 ${dbType} 的配置示例...\n`;
+            
+            fetch(`/api/backup/config/${dbType}`).then(r => r.json()).then(data => {
+                if (data.success) {
+                    output.textContent = data.content;
+                } else {
+                    output.textContent = '❌ ' + data.error;
+                }
+            });
+        }
+
+        function loadBackupLog() {
+            const output = document.getElementById('backup-config-output');
+            output.textContent = '正在加载备份日志...\n';
+            
+            fetch('/api/backup/log').then(r => r.json()).then(data => {
+                if (data.success) {
+                    output.textContent = data.content;
+                } else {
+                    output.textContent = '❌ ' + data.error;
+                }
             });
         }
         
@@ -1919,6 +2370,289 @@ ${d.disk.percent > 90 ? '⚠️ 警告: 磁盘空间不足' : ''}
             }, 5000);
         }
         
+        // ==========================================
+        // 用户反馈相关函数
+        // ==========================================
+        
+        function submitFeedback() {
+            const type = document.getElementById('feedback-type').value;
+            const priority = document.getElementById('feedback-priority').value;
+            const title = document.getElementById('feedback-title').value.trim();
+            const description = document.getElementById('feedback-description').value.trim();
+            const contact = document.getElementById('feedback-contact').value.trim();
+            
+            if (!title) {
+                alert('请输入标题');
+                return;
+            }
+            if (!description) {
+                alert('请输入详细描述');
+                return;
+            }
+            
+            fetch('/api/feedback', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({type, priority, title, description, contact})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('反馈提交成功！反馈ID: ' + data.feedback_id);
+                    clearFeedbackForm();
+                    loadFeedbackList();
+                } else {
+                    alert('提交失败: ' + data.error);
+                }
+            })
+            .catch(e => alert('提交失败: ' + e.message));
+        }
+        
+        function clearFeedbackForm() {
+            document.getElementById('feedback-type').value = 'bug';
+            document.getElementById('feedback-priority').value = 'normal';
+            document.getElementById('feedback-title').value = '';
+            document.getElementById('feedback-description').value = '';
+            document.getElementById('feedback-contact').value = '';
+        }
+        
+        function loadFeedbackList() {
+            fetch('/api/feedback/list')
+                .then(r => r.json())
+                .then(data => {
+                    const tbody = document.getElementById('feedback-list');
+                    if (!data.success || data.data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#7f8c8d;">暂无反馈记录</td></tr>';
+                        return;
+                    }
+                    
+                    tbody.innerHTML = data.data.map(f => {
+                        const typeMap = {bug: '🐛 Bug', feature: '💡 建议', other: '📝 其他'};
+                        const priorityMap = {low: '低', normal: '普通', high: '高', critical: '紧急'};
+                        const statusMap = {pending: '待处理', processing: '处理中', resolved: '已解决', closed: '已关闭'};
+                        const statusClass = f.status === 'resolved' ? 'status-active' : f.status === 'pending' ? 'status-warning' : 'status-unknown';
+                        
+                        return `<tr>
+                            <td>${f.id}</td>
+                            <td>${typeMap[f.type] || f.type}</td>
+                            <td>${f.title}</td>
+                            <td>${priorityMap[f.priority] || f.priority}</td>
+                            <td><span class="status-badge ${statusClass}">${statusMap[f.status] || f.status}</span></td>
+                            <td style="font-size:12px;">${f.created_at}</td>
+                        </tr>`;
+                    }).join('');
+                })
+                .catch(e => {
+                    document.getElementById('feedback-list').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#e74c3c;">加载失败: ' + e.message + '</td></tr>';
+                });
+        }
+        
+        // ==========================================
+        // 脚本上传相关函数
+        // ==========================================
+        
+        function uploadScript() {
+            const name = document.getElementById('script-name').value.trim();
+            const category = document.getElementById('script-category').value;
+            const description = document.getElementById('script-description').value.trim();
+            const author = document.getElementById('script-author').value.trim();
+            const contact = document.getElementById('script-contact').value.trim();
+            const fileInput = document.getElementById('script-file');
+            
+            if (!name) {
+                alert('请输入脚本名称');
+                return;
+            }
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('请选择脚本文件');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('category', category);
+            formData.append('description', description);
+            formData.append('author', author);
+            formData.append('contact', contact);
+            formData.append('script', fileInput.files[0]);
+            
+            fetch('/api/scripts/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('脚本上传成功！脚本ID: ' + data.script_id + '\n请等待管理员审核。');
+                    clearScriptForm();
+                } else {
+                    alert('上传失败: ' + data.error);
+                }
+            })
+            .catch(e => alert('上传失败: ' + e.message));
+        }
+        
+        function clearScriptForm() {
+            document.getElementById('script-name').value = '';
+            document.getElementById('script-category').value = 'middleware';
+            document.getElementById('script-description').value = '';
+            document.getElementById('script-author').value = '';
+            document.getElementById('script-contact').value = '';
+            document.getElementById('script-file').value = '';
+        }
+        
+        function loadPendingScripts() {
+            fetch('/api/scripts/pending')
+                .then(r => r.json())
+                .then(data => {
+                    const container = document.getElementById('pending-scripts-list');
+                    if (!data.success || data.data.length === 0) {
+                        container.innerHTML = '<p style="color:#7f8c8d;text-align:center;padding:20px;">暂无待审核脚本</p>';
+                        return;
+                    }
+                    
+                    container.innerHTML = data.data.map(s => {
+                        const statusClass = s.status === 'approved' ? 'status-active' : s.status === 'rejected' ? 'status-inactive' : 'status-warning';
+                        const statusText = s.status === 'approved' ? '已通过' : s.status === 'rejected' ? '已拒绝' : '待审核';
+                        
+                        return `<div class="card" style="margin-bottom:12px;padding:16px;">
+                            <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:12px;">
+                                <div>
+                                    <h4 style="margin:0 0 8px 0;">${s.name} <span class="status-badge ${statusClass}" style="font-size:11px;">${statusText}</span></h4>
+                                    <p style="margin:0 0 8px 0;color:#7f8c8d;font-size:13px;">${s.description || '无描述'}</p>
+                                    <div style="font-size:12px;color:#95a5a6;">
+                                        <span>作者: ${s.author || '匿名'}</span> | 
+                                        <span>分类: ${s.category}</span> | 
+                                        <span>提交时间: ${s.created_at}</span>
+                                    </div>
+                                </div>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                    <button class="btn btn-primary" style="padding:6px 12px;font-size:12px;" onclick="viewScriptContent('${s.id}')">👁️ 查看</button>
+                                    ${s.status === 'pending' ? `
+                                        <button class="btn btn-success" style="padding:6px 12px;font-size:12px;" onclick="approveScript('${s.id}')">✅ 通过</button>
+                                        <button class="btn btn-danger" style="padding:6px 12px;font-size:12px;" onclick="rejectScript('${s.id}')">❌ 拒绝</button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
+                })
+                .catch(e => {
+                    document.getElementById('pending-scripts-list').innerHTML = '<p style="color:#e74c3c;text-align:center;padding:20px;">加载失败: ' + e.message + '</p>';
+                });
+        }
+        
+        function viewScriptContent(scriptId) {
+            fetch('/api/scripts/' + scriptId + '/content')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const content = data.data.content;
+                        const meta = data.data.meta;
+                        alert('脚本名称: ' + meta.name + '\n作者: ' + meta.author + '\n\n脚本内容:\n' + content.substring(0, 1000) + (content.length > 1000 ? '\n...(内容过长，已截断)' : ''));
+                    } else {
+                        alert('获取失败: ' + data.error);
+                    }
+                })
+                .catch(e => alert('获取失败: ' + e.message));
+        }
+        
+        function approveScript(scriptId) {
+            if (!confirm('确定要审核通过这个脚本吗？\n通过后将自动安装到系统中。')) return;
+            
+            fetch('/api/scripts/' + scriptId + '/approve', {method: 'POST'})
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        loadPendingScripts();
+                    } else {
+                        alert('审核失败: ' + data.error);
+                    }
+                })
+                .catch(e => alert('审核失败: ' + e.message));
+        }
+        
+        function rejectScript(scriptId) {
+            const reason = prompt('请输入拒绝原因:');
+            if (!reason) return;
+            
+            fetch('/api/scripts/' + scriptId + '/reject', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({reason})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('脚本已拒绝');
+                    loadPendingScripts();
+                } else {
+                    alert('操作失败: ' + data.error);
+                }
+            })
+            .catch(e => alert('操作失败: ' + e.message));
+        }
+        
+        // ==========================================
+        // 域名配置和统计信息
+        // ==========================================
+        
+        function saveDomainConfig() {
+            const domain = document.getElementById('webui-domain').value.trim();
+            const gitRepo = document.getElementById('git-repo-url').value.trim();
+            const adminEmail = document.getElementById('admin-email').value.trim();
+            
+            // 保存到 localStorage（实际项目中应保存到后端）
+            const config = {domain, gitRepo, adminEmail};
+            localStorage.setItem('webui_domain_config', JSON.stringify(config));
+            
+            alert('域名配置已保存');
+        }
+        
+        function loadDomainConfig() {
+            const configStr = localStorage.getItem('webui_domain_config');
+            if (configStr) {
+                try {
+                    const config = JSON.parse(configStr);
+                    document.getElementById('webui-domain').value = config.domain || '';
+                    document.getElementById('git-repo-url').value = config.gitRepo || '';
+                    document.getElementById('admin-email').value = config.adminEmail || '';
+                } catch(e) {}
+            }
+        }
+        
+        function loadStatistics() {
+            // 加载反馈统计
+            fetch('/api/feedback/list')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('stat-feedback-count').textContent = data.success ? data.data.length : 0;
+                })
+                .catch(() => {});
+            
+            // 加载脚本统计
+            fetch('/api/scripts/pending')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const pending = data.data.filter(s => s.status === 'pending').length;
+                        const approved = data.data.filter(s => s.status === 'approved').length;
+                        document.getElementById('stat-pending-scripts').textContent = pending;
+                        document.getElementById('stat-approved-scripts').textContent = approved;
+                    }
+                })
+                .catch(() => {});
+            
+            // 加载软件总数
+            fetch('/api/software/list')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('stat-software-count').textContent = data.success ? data.data.length : 0;
+                })
+                .catch(() => {});
+        }
+        
         // 当显示配置页面时自动加载配置
         window.addEventListener('load', function() {
             // 拦截 showPage 函数，在显示 settings 页面时加载配置
@@ -1926,7 +2660,11 @@ ${d.disk.percent > 90 ? '⚠️ 警告: 磁盘空间不足' : ''}
             window.showPage = function(page) {
                 originalShowPage(page);
                 if (page === 'settings') {
-                    setTimeout(loadWebUIConfig, 100);
+                    setTimeout(function() {
+                        loadWebUIConfig();
+                        loadDomainConfig();
+                        loadStatistics();
+                    }, 100);
                 }
             };
         });

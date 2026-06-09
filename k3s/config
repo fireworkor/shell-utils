@@ -1,0 +1,16 @@
+# K3s 配置文件
+
+# K3s 版本 (可选，留空使用最新版本)
+K3S_VERSION=""
+
+# Server 节点 Token (Agent 加入时需要)
+K3S_TOKEN=""
+
+# Server 地址 (Agent 模式必需)
+K3S_URL=""
+
+# 额外安装参数
+K3S_EXTRA_ARGS=""
+
+# 数据目录
+K3S_DATA_DIR="/var/lib/rancher/k3s"

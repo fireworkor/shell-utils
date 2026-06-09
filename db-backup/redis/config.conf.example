@@ -1,0 +1,32 @@
+# Redis 备份配置文件示例
+# 将此文件复制为 config.conf 并根据实际情况修改
+
+# 数据库连接配置
+REDIS_HOST="localhost"
+REDIS_PORT="6379"
+REDIS_PASSWORD="your_password_here"
+
+# 备份配置
+BACKUP_ROOT="/var/backups/redis"
+INCREMENTAL_RETENTION=7
+FULL_RETENTION=30
+
+# 日志配置
+LOG_FILE="/var/log/redis_backup.log"
+
+# Redis 配置文件（redis.conf）示例
+# bind 127.0.0.1
+# port 6379
+# requirepass your_password_here
+
+# RDB 持久化配置
+# save 900 1
+# save 300 10
+# save 60 10000
+# dbfilename dump.rdb
+# dir /var/lib/redis
+
+# AOF 持久化配置（可选）
+# appendonly yes
+# appendfilename "appendonly.aof"
+# appendfsync everysec

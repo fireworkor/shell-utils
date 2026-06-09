@@ -1,0 +1,42 @@
+# Elasticsearch 备份配置文件示例
+# 将此文件复制为 config.conf 并根据实际情况修改
+
+# 数据库连接配置
+ES_HOST="localhost"
+ES_PORT="9200"
+ES_USER="elastic"
+ES_PASSWORD="your_password_here"
+
+# 快照仓库配置
+REPO_NAME="backup_repo"
+BACKUP_ROOT="/var/backups/elasticsearch"
+
+# 备份配置
+RETENTION_DAYS=30
+
+# 日志配置
+LOG_FILE="/var/log/elasticsearch_backup.log"
+
+# Elasticsearch 配置文件（elasticsearch.yml）示例
+# network.host: 127.0.0.1
+# http.port: 9200
+
+# 快照仓库路径配置（必须配置）
+# path.repo: ["/var/backups/elasticsearch"]
+
+# 集群名称
+# cluster.name: my-cluster
+
+# 节点名称
+# node.name: node-1
+
+# 发现配置（单节点）
+# discovery.type: single-node
+
+# 安全配置（启用时）
+# xpack.security.enabled: true
+# xpack.security.transport.ssl.enabled: true
+
+# JVM 堆内存配置（jvm.options）
+# -Xms4g
+# -Xmx4g

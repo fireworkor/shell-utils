@@ -1,51 +1,64 @@
 #!/bin/bash
 # SSL 安装脚本
-# SSL 证书管理工具
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB_DIR="$SCRIPT_DIR/../lib"
+VERSION="${1:-}"
 
 if [ -f "$LIB_DIR/common.sh" ]; then
     source "$LIB_DIR/common.sh"
+fi
+
+if [ -f "$SCRIPT_DIR/config" ]; then
+    source "$SCRIPT_DIR/config"
 fi
 
 SERVICE_NAME="ssl"
 SOFTWARE_NAME="ssl"
 DISPLAY_NAME="SSL"
 
+RED='\\033[0;31m'
+GREEN='\\033[0;32m'
+YELLOW='\\033[1;33m'
+BLUE='\\033[0;34m'
+NC='\\033[0m'
+
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $*"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $*"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $*"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $*"
+}
+
 install() {
-    echo "正在安装 SSL..."
-    echo "SSL 证书管理工具"
+    log_info "正在安装 ${DISPLAY_NAME}..."
     
-    # 根据类别安装
-    case "tool" in
-        language)
-            echo "编程语言环境安装"
-            echo "请参考官方文档进行安装"
-            ;;
-        middleware)
-            echo "中间件安装"
-            echo "请下载并安装 SSL"
-            ;;
-        tool)
-            echo "工具安装"
-            echo "请根据 README.md 进行安装"
-            ;;
-        service)
-            if command -v apt &>/dev/null; then
-                sudo apt update
-                sudo apt install -y ssl
-            elif command -v yum &>/dev/null; then
-                sudo yum install -y ssl
-            fi
-            ;;
-        *)
-            echo "请手动安装 SSL"
-            echo "参考 README.md 中的说明"
-            ;;
-    esac
+    if [ -f "$SCRIPT_DIR/${SOFTWARE_NAME}.sh.original" ]; then
+        bash "$SCRIPT_DIR/${SOFTWARE_NAME}.sh.original" "$VERSION"
+    elif [ -f "$SCRIPT_DIR/${SOFTWARE_NAME}.sh" ]; then
+        bash "$SCRIPT_DIR/${SOFTWARE_NAME}.sh" "$VERSION"
+    else
+        log_warn "未找到 ${SOFTWARE_NAME} 的原始安装脚本"
+        log_info "请参考 README.md 手动安装"
+        return 0
+    fi
     
-    echo "SSL 安装完成"
+    if [ $? -eq 0 ]; then
+        log_success "${DISPLAY_NAME} 安装完成"
+        return 0
+    else
+        log_error "${DISPLAY_NAME} 安装失败"
+        return 1
+    fi
 }
 
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then

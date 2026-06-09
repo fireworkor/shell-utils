@@ -25,7 +25,7 @@ get_system_info() {
     echo -e "${BLUE}========================================${NC}"
     echo ""
     echo -e "${YELLOW}系统信息：${NC}"
-    echo "  操作系统: $(cat /etc/centos-release | head -1)"
+    echo "  操作系统: $(head -1 /etc/centos-release)"
     echo "  内核版本: $(uname -r)"
     echo "  架构: $(uname -m)"
     echo "  运行时间: $(uptime -p)"
@@ -52,19 +52,19 @@ get_memory_mb() {
 get_profile() {
     local mem_gb=$1
     
-    if [ $mem_gb -lt 1 ]; then
+    if [ "$mem_gb" -lt 1 ]; then
         echo "tiny"
-    elif [ $mem_gb -lt 2 ]; then
+    elif [ "$mem_gb" -lt 2 ]; then
         echo "small"
-    elif [ $mem_gb -lt 4 ]; then
+    elif [ "$mem_gb" -lt 4 ]; then
         echo "medium"
-    elif [ $mem_gb -lt 8 ]; then
+    elif [ "$mem_gb" -lt 8 ]; then
         echo "large"
-    elif [ $mem_gb -lt 16 ]; then
+    elif [ "$mem_gb" -lt 16 ]; then
         echo "xlarge"
-    elif [ $mem_gb -lt 32 ]; then
+    elif [ "$mem_gb" -lt 32 ]; then
         echo "2xlarge"
-    elif [ $mem_gb -lt 64 ]; then
+    elif [ "$mem_gb" -lt 64 ]; then
         echo "4xlarge"
     else
         echo "8xlarge"
@@ -479,7 +479,7 @@ EOF
 config_limits() {
     local mem_gb=$1
     local nofile_limit=$((mem_gb * 65536))
-    if [ $nofile_limit -gt 65536 ]; then
+    if [ "$nofile_limit" -gt 65536 ]; then
         nofile_limit=65536
     fi
     
@@ -658,11 +658,11 @@ main() {
             ;;
     esac
     
-    config_limits $mem_gb
+    config_limits "$mem_gb"
     config_network_tuning
     apply_config
     verify_config
-    show_recommendations $mem_gb $profile
+    show_recommendations "$mem_gb" "$profile"
     
     echo ""
     echo -e "${GREEN}========================================${NC}"

@@ -52,7 +52,13 @@ def load_config():
         'host': os.environ.get('HOST', '0.0.0.0'),
         'debug': os.environ.get('FLASK_DEBUG', 'false').lower() == 'true',
         'secret_key': os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production'),
-        'webhook_secret': os.environ.get('WEBHOOK_SECRET', 'shell-utils-webhook-secret')
+        'webhook_secret': os.environ.get('WEBHOOK_SECRET', 'shell-utils-webhook-secret'),
+        # PostgreSQL 数据库配置
+        'db_host': os.environ.get('DB_HOST', 'localhost'),
+        'db_port': int(os.environ.get('DB_PORT', 5432)),
+        'db_name': os.environ.get('DB_NAME', 'webui'),
+        'db_user': os.environ.get('DB_USER', 'webui'),
+        'db_password': os.environ.get('DB_PASSWORD', 'webui'),
     }
     
     if os.path.exists(config_file):
@@ -67,9 +73,18 @@ def load_config():
                 config['debug'] = section.get('debug', 'false').lower() == 'true'
                 config['secret_key'] = section.get('secret_key', config['secret_key'])
                 config['webhook_secret'] = section.get('webhook_secret', config['webhook_secret'])
+            
+            if 'database' in parser:
+                db_section = parser['database']
+                config['db_host'] = db_section.get('host', config['db_host'])
+                config['db_port'] = int(db_section.get('port', config['db_port']))
+                config['db_name'] = db_section.get('name', config['db_name'])
+                config['db_user'] = db_section.get('user', config['db_user'])
+                config['db_password'] = db_section.get('password', config['db_password'])
                 
             logger.info(f"已加载配置文件: {config_file}")
             logger.info(f"WebUI 将监听 {config['host']}:{config['port']}")
+            logger.info(f"数据库: {config['db_host']}:{config['db_port']}/{config['db_name']}")
         except Exception as e:
             logger.warning(f"配置文件读取失败: {e}，使用默认值")
     else:
@@ -175,11 +190,38 @@ def index():
 @handle_errors
 def system_info():
     """系统信息"""
-    result = safe_subprocess_run(['bash', '-c', 'hostname && uname -a && uptime'])
-    return jsonify({
-        'success': True,
-        'data': result.stdout
-    })
+    try:
+        import psutil
+        import platform
+        from datetime import datetime
+
+        hostname = platform.node()
+        system = platform.system()
+        release = platform.release()
+        machine = platform.machine()
+        boot_time = datetime.fromtimestamp(psutil.boot_time())
+        uptime_seconds = (datetime.now() - boot_time).total_seconds()
+        hours = int(uptime_seconds // 3600)
+        minutes = int((uptime_seconds % 3600) // 60)
+        days = int(hours // 24)
+        hours = hours % 24
+
+        uptime_str = f"{days} days, {hours}:{minutes:02d}"
+        data = (
+            f"主机名: {hostname}\n"
+            f"操作系统: {system} {release}\n"
+            f"架构: {machine}\n"
+            f"内核: {platform.release()}\n"
+            f"运行时间: {uptime_str}\n"
+            f"启动时间: {boot_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+            f"CPU核心: {psutil.cpu_count(logical=False)} 物理 / {psutil.cpu_count(logical=True)} 逻辑\n"
+            f"Python版本: {platform.python_version()}\n"
+        )
+        return jsonify({'success': True, 'data': data})
+    except Exception:
+        # 回退到 shell 命令
+        result = safe_subprocess_run(['bash', '-c', 'hostname && uname -a && uptime'])
+        return jsonify({'success': True, 'data': result.stdout})
 
 @app.route('/api/services')
 @handle_errors
@@ -291,58 +333,162 @@ def daily_check():
 @handle_errors
 def cpu_info():
     """CPU信息"""
-    result = safe_subprocess_run(['bash', '-c', 'top -bn1 | grep "Cpu(s)" && mpstat 1 1'])
-    return jsonify({'success': True, 'data': result.stdout})
+    try:
+        import psutil
+
+        cpu_percent = psutil.cpu_percent(interval=1)
+        per_cpu = psutil.cpu_percent(interval=None, percpu=True)
+        cpu_count_logical = psutil.cpu_count(logical=True)
+        cpu_count_physical = psutil.cpu_count(logical=False)
+        load_avg = psutil.getloadavg()
+
+        lines = []
+        lines.append(f"Cpu(s): {cpu_percent:.1f}% 使用率")
+        lines.append(f"物理核心: {cpu_count_physical}, 逻辑核心: {cpu_count_logical}")
+        lines.append(f"Load Average: {load_avg[0]:.2f}, {load_avg[1]:.2f}, {load_avg[2]:.2f}")
+        lines.append("")
+        for i, p in enumerate(per_cpu):
+            lines.append(f"  CPU {i:2d}: {p:5.1f}%")
+
+        # 添加百分比用于仪表盘显示
+        data_str = "\n".join(lines)
+        return jsonify({'success': True, 'data': f"{cpu_percent:.1f}% us\n{data_str}"})
+    except Exception:
+        # 回退到 shell 命令
+        result = safe_subprocess_run(['bash', '-c', 'top -bn1 | grep "Cpu(s)"'])
+        return jsonify({'success': True, 'data': result.stdout})
 
 @app.route('/api/memory')
 @handle_errors
 def memory_info():
     """内存信息"""
-    result = safe_subprocess_run(['free'])
-    lines = result.stdout.split('\n')
-    mem_line = None
-    for line in lines:
-        if line.startswith('Mem:'):
-            mem_line = line
-            break
-    
-    if mem_line:
-        parts = list(filter(None, mem_line.split()))
-        total = int(parts[1])
-        used = int(parts[2])
-        percent = (used / total) * 100
-        
-        result_h = safe_subprocess_run(['free', '-h'])
+    try:
+        import psutil
+
+        mem = psutil.virtual_memory()
+        swap = psutil.swap_memory()
+
+        total_mb = int(mem.total / 1024 / 1024)
+        used_mb = int(mem.used / 1024 / 1024)
+        available_mb = int(mem.available / 1024 / 1024)
+        percent = round(mem.percent, 1)
+
+        # 构造可读格式
+        def fmt(size_bytes):
+            for unit in ['B', 'K', 'M', 'G', 'T']:
+                if size_bytes < 1024:
+                    return f"{size_bytes:.1f}{unit}"
+                size_bytes /= 1024
+            return f"{size_bytes:.1f}P"
+
+        data = (
+            f"              total        used        free      shared  buff/cache   available\n"
+            f"Mem:       {total_mb:>8}M    {used_mb:>8}M    {int(mem.free/1024/1024):>8}M    "
+            f"{int(mem.shared/1024/1024):>6}M    {int(mem.buffers/1024/1024):>8}M    {available_mb:>8}M\n"
+            f"Swap:      {int(swap.total/1024/1024):>8}M    {int(swap.used/1024/1024):>8}M    "
+            f"{int(swap.free/1024/1024):>8}M\n"
+            f"\n总内存: {fmt(mem.total)}    已用: {fmt(mem.used)}    可用: {fmt(mem.available)}\n"
+            f"使用率: {percent}%\n"
+        )
+
         return jsonify({
             'success': True,
-            'data': result_h.stdout,
-            'percent': round(percent, 1),
-            'total': total,
-            'used': used
+            'data': data,
+            'percent': percent,
+            'total': total_mb,
+            'used': used_mb
         })
-    
-    return jsonify({'success': True, 'data': result.stdout})
+    except Exception:
+        # 回退
+        result = safe_subprocess_run(['free', '-h'])
+        return jsonify({'success': True, 'data': result.stdout})
 
 @app.route('/api/disk')
 @handle_errors
 def disk_info():
     """磁盘信息"""
-    result = safe_subprocess_run(['df', '-h'])
-    return jsonify({'success': True, 'data': result.stdout})
+    try:
+        import psutil
+
+        lines = ["Filesystem      Size  Used Avail Use% Mounted on"]
+        for part in psutil.disk_partitions(all=False):
+            try:
+                usage = psutil.disk_usage(part.mountpoint)
+                size_gb = round(usage.total / 1024 / 1024 / 1024, 1)
+                used_gb = round(usage.used / 1024 / 1024 / 1024, 1)
+                free_gb = round(usage.free / 1024 / 1024 / 1024, 1)
+                device = part.device[:13] if len(part.device) > 13 else part.device
+                lines.append(f"{device:<14} {size_gb:>4}G  {used_gb:>4}G  {free_gb:>4}G  {int(usage.percent):>3}% {part.mountpoint}")
+            except (PermissionError, OSError):
+                continue
+        return jsonify({'success': True, 'data': "\n".join(lines)})
+    except Exception:
+        result = safe_subprocess_run(['df', '-h'])
+        return jsonify({'success': True, 'data': result.stdout})
 
 @app.route('/api/network')
 @handle_errors
 def network_info():
     """网络信息"""
-    result = safe_subprocess_run(['bash', '-c', 'ip addr show | grep inet && ss -tuln | head -20'])
-    return jsonify({'success': True, 'data': result.stdout})
+    try:
+        import psutil
+
+        lines = []
+        # 网络接口信息
+        for iface, addrs in psutil.net_if_addrs().items():
+            for addr in addrs:
+                if addr.family == 2:  # AF_INET (IPv4)
+                    lines.append(f"inet {addr.address}  netmask {addr.netmask}")
+        lines.append("")
+        # 监听端口
+        connections = psutil.net_connections()
+        listening = [c for c in connections if c.status == 'LISTEN'][:20]
+        lines.append("监听端口 (前20个):")
+        lines.append(f"{'Proto':<8} {'Local Address':<25} {'Status':<10}")
+        for c in listening:
+            laddr = f"{c.laddr.ip}:{c.laddr.port}" if c.laddr else "*:*"
+            proto = 'tcp' if c.type == 1 else 'udp'
+            lines.append(f"{proto:<8} {laddr:<25} {c.status:<10}")
+
+        return jsonify({'success': True, 'data': "\n".join(lines)})
+    except Exception:
+        result = safe_subprocess_run(['bash', '-c', 'ip addr show | grep inet && ss -tuln | head -20'])
+        return jsonify({'success': True, 'data': result.stdout})
 
 @app.route('/api/processes')
 @handle_errors
 def processes():
     """进程信息"""
-    result = safe_subprocess_run(['bash', '-c', 'ps aux --sort=-%mem | head -20'])
-    return jsonify({'success': True, 'data': result.stdout})
+    try:
+        import psutil
+
+        proc_list = []
+        for proc in psutil.process_iter(['pid', 'name', 'username', 'memory_percent', 'cpu_percent']):
+            try:
+                proc_list.append({
+                    'pid': proc.info['pid'],
+                    'name': proc.info['name'],
+                    'user': proc.info['username'],
+                    'cpu': proc.info['cpu_percent'],
+                    'mem': proc.info['memory_percent']
+                })
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        # 按内存使用率排序取前20个
+        proc_list.sort(key=lambda x: x['mem'], reverse=True)
+        top_procs = proc_list[:20]
+
+        lines = [f"{'USER':<12} {'PID':<8} {'%CPU':<8} {'%MEM':<8} {'COMMAND':<30}"]
+        for p in top_procs:
+            lines.append(
+                f"{p['user']:<12} {p['pid']:<8} {p['cpu']:<8.1f} {p['mem']:<8.1f} {p['name']:<30}"
+            )
+
+        return jsonify({'success': True, 'data': "\n".join(lines)})
+    except Exception:
+        result = safe_subprocess_run(['bash', '-c', 'ps aux --sort=-%mem | head -20'])
+        return jsonify({'success': True, 'data': result.stdout})
 
 # ==========================================
 # 软件管理
@@ -645,19 +791,74 @@ def uninstall_software():
 # 备份恢复
 # ==========================================
 
+SUPPORTED_DATABASES = [
+    {'name': 'all', 'label': '全部数据库', 'icon': '📦'},
+    {'name': 'mysql', 'label': 'MySQL', 'icon': '🐬'},
+    {'name': 'postgresql', 'label': 'PostgreSQL', 'icon': '🐘'},
+    {'name': 'mongodb', 'label': 'MongoDB', 'icon': '🍃'},
+    {'name': 'redis', 'label': 'Redis', 'icon': '⚡'},
+    {'name': 'mariadb', 'label': 'MariaDB', 'icon': '🦋'},
+    {'name': 'sqlite', 'label': 'SQLite', 'icon': '📊'},
+    {'name': 'elasticsearch', 'label': 'Elasticsearch', 'icon': '🔍'},
+    {'name': 'influxdb', 'label': 'InfluxDB', 'icon': '📈'}
+]
+
+BACKUP_TYPES = [
+    {'name': 'incremental', 'label': '增量备份', 'description': '仅备份变更的数据，速度快'},
+    {'name': 'full', 'label': '全量备份', 'description': '备份全部数据，数据完整'}
+]
+
+BACKUP_MANAGER_PATH = '/workspace/db-backup/backup_manager.sh'
+
+@app.route('/api/backup/databases')
+@handle_errors
+def backup_databases():
+    """获取支持的数据库列表"""
+    return jsonify({'success': True, 'data': SUPPORTED_DATABASES})
+
+@app.route('/api/backup/types')
+@handle_errors
+def backup_types():
+    """获取备份类型列表"""
+    return jsonify({'success': True, 'data': BACKUP_TYPES})
+
 @app.route('/api/backup', methods=['POST'])
 @handle_errors
 def backup():
-    """备份"""
+    """执行备份"""
     data = request.json
     target = data.get('target', 'all')
+    backup_type = data.get('type', 'incremental')
+    
+    # 验证目标数据库
+    valid_targets = [db['name'] for db in SUPPORTED_DATABASES]
+    if target not in valid_targets:
+        return jsonify({'success': False, 'error': f'不支持的数据库类型: {target}'})
+    
+    # 验证备份类型
+    valid_types = [t['name'] for t in BACKUP_TYPES]
+    if backup_type not in valid_types:
+        return jsonify({'success': False, 'error': f'不支持的备份类型: {backup_type}'})
     
     try:
-        result = safe_subprocess_run([f'{SCRIPT_DIR}/backup/backup.sh', 'backup', target], timeout=120)
+        # 如果目标是特定数据库，直接调用对应脚本
+        if target != 'all':
+            backup_script = f'/workspace/db-backup/{target}/incremental.sh'
+            if backup_type == 'full':
+                backup_script = f'/workspace/db-backup/{target}/full_backup.sh'
+            
+            if os.path.exists(backup_script):
+                result = safe_subprocess_run([backup_script, backup_type], timeout=120)
+            else:
+                return jsonify({'success': False, 'error': f'未找到 {target} 的备份脚本'})
+        else:
+            # 调用统一备份管理脚本
+            result = safe_subprocess_run([BACKUP_MANAGER_PATH, backup_type], timeout=180)
+        
         output = result.stdout + result.stderr
         success = result.returncode == 0
         
-        send_alert_email('backup', f'数据备份 ({target})', output, success)
+        send_alert_email('backup', f'{backup_type}备份 ({target})', output, success)
         
         return jsonify({
             'success': success,
@@ -665,8 +866,36 @@ def backup():
             'error': result.stderr
         })
     except Exception as e:
-        send_alert_email('backup', f'备份异常 ({target})', str(e), False)
+        send_alert_email('backup', f'{backup_type}备份异常 ({target})', str(e), False)
         raise
+
+@app.route('/api/backup/cleanup', methods=['POST'])
+@handle_errors
+def backup_cleanup():
+    """清理旧备份"""
+    data = request.json
+    target = data.get('target', 'all')
+    
+    try:
+        if target != 'all':
+            backup_script = f'/workspace/db-backup/{target}/incremental.sh'
+            if os.path.exists(backup_script):
+                result = safe_subprocess_run([backup_script, 'cleanup'], timeout=60)
+            else:
+                return jsonify({'success': False, 'error': f'未找到 {target} 的备份脚本'})
+        else:
+            result = safe_subprocess_run([BACKUP_MANAGER_PATH, 'cleanup'], timeout=120)
+        
+        output = result.stdout + result.stderr
+        success = result.returncode == 0
+        
+        return jsonify({
+            'success': success,
+            'output': result.stdout,
+            'error': result.stderr
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/restore', methods=['POST'])
 @handle_errors
@@ -679,8 +908,18 @@ def restore():
     if not target or not backup_file:
         return jsonify({'success': False, 'error': '请指定恢复目标和备份文件'})
     
+    # 验证目标数据库
+    valid_targets = [db['name'] for db in SUPPORTED_DATABASES if db['name'] != 'all']
+    if target not in valid_targets:
+        return jsonify({'success': False, 'error': f'不支持的数据库类型: {target}'})
+    
     try:
-        cmd = [f'{SCRIPT_DIR}/backup/backup.sh', 'restore', target, backup_file]
+        restore_script = f'/workspace/db-backup/{target}/restore.sh'
+        
+        if not os.path.exists(restore_script):
+            return jsonify({'success': False, 'error': f'未找到 {target} 的恢复脚本'})
+        
+        cmd = [restore_script, backup_file]
         result = safe_subprocess_run(cmd, timeout=120)
         output = result.stdout + result.stderr
         success = result.returncode == 0
@@ -701,27 +940,77 @@ def restore():
 def backup_list():
     """备份列表"""
     backup_dir = '/var/backups/shell-utils'
-    backups = {}
+    backups = []
     
     if os.path.isdir(backup_dir):
-        for subdir in os.listdir(backup_dir):
-            sub_path = os.path.join(backup_dir, subdir)
-            if os.path.isdir(sub_path):
-                files = []
-                for f in sorted(os.listdir(sub_path), reverse=True):
-                    fpath = os.path.join(sub_path, f)
+        for db_type in os.listdir(backup_dir):
+            db_path = os.path.join(backup_dir, db_type)
+            if os.path.isdir(db_path):
+                for f in sorted(os.listdir(db_path), reverse=True):
+                    fpath = os.path.join(db_path, f)
                     if os.path.isfile(fpath):
                         stat = os.stat(fpath)
-                        files.append({
+                        # 判断备份类型
+                        backup_type = 'incremental' if 'incremental' in f.lower() else 'full'
+                        backups.append({
+                            'db_type': db_type,
+                            'db_label': next((db['label'] for db in SUPPORTED_DATABASES if db['name'] == db_type), db_type),
                             'name': f,
                             'path': fpath,
-                            'size': round(stat.st_size / 1024, 1),
-                            'time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(stat.st_mtime))
+                            'size_kb': round(stat.st_size / 1024, 1),
+                            'size': format_size(stat.st_size),
+                            'time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(stat.st_mtime)),
+                            'timestamp': stat.st_mtime,
+                            'backup_type': backup_type
                         })
-                if files:
-                    backups[subdir] = files[:20]
+    
+    # 按时间排序
+    backups.sort(key=lambda x: x['timestamp'], reverse=True)
     
     return jsonify({'success': True, 'data': backups})
+
+def format_size(bytes_size):
+    """格式化文件大小"""
+    if bytes_size < 1024:
+        return f"{bytes_size} B"
+    elif bytes_size < 1024 * 1024:
+        return f"{bytes_size / 1024:.1f} KB"
+    elif bytes_size < 1024 * 1024 * 1024:
+        return f"{bytes_size / (1024 * 1024):.1f} MB"
+    else:
+        return f"{bytes_size / (1024 * 1024 * 1024):.1f} GB"
+
+@app.route('/api/backup/config/<db_type>')
+@handle_errors
+def backup_config(db_type):
+    """获取数据库备份配置"""
+    config_file = f'/workspace/db-backup/{db_type}/config.conf.example'
+    
+    if not os.path.exists(config_file):
+        return jsonify({'success': False, 'error': f'未找到 {db_type} 的配置文件'})
+    
+    try:
+        with open(config_file, 'r') as f:
+            content = f.read()
+        
+        return jsonify({'success': True, 'content': content})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/backup/log')
+@handle_errors
+def backup_log():
+    """获取备份日志"""
+    log_file = '/var/log/db_backup_manager.log'
+    
+    if not os.path.exists(log_file):
+        return jsonify({'success': False, 'error': '备份日志文件不存在'})
+    
+    try:
+        result = safe_subprocess_run(['tail', '-100', log_file])
+        return jsonify({'success': True, 'content': result.stdout})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 # ==========================================
 # 更新管理
@@ -1184,6 +1473,380 @@ def restart_webui():
     except Exception as e:
         logger.error(f'重启失败: {e}')
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# ==========================================
+# PostgreSQL 数据库连接
+# ==========================================
+
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from contextlib import contextmanager
+
+def get_pg_connection():
+    """获取 PostgreSQL 数据库连接"""
+    try:
+        conn = psycopg2.connect(
+            host=WEBUI_CONFIG['db_host'],
+            port=WEBUI_CONFIG['db_port'],
+            database=WEBUI_CONFIG['db_name'],
+            user=WEBUI_CONFIG['db_user'],
+            password=WEBUI_CONFIG['db_password']
+        )
+        return conn
+    except psycopg2.Error as e:
+        logger.error(f'数据库连接失败: {e}')
+        return None
+
+@contextmanager
+def get_db_cursor():
+    """数据库上下文管理器"""
+    conn = get_pg_connection()
+    if not conn:
+        yield None
+        return
+    
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        yield cursor
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        logger.error(f'数据库操作失败: {e}')
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+
+def init_pg_database():
+    """初始化 PostgreSQL 数据库表"""
+    conn = get_pg_connection()
+    if not conn:
+        logger.warning('无法连接到 PostgreSQL，将使用文件存储')
+        return False
+    
+    try:
+        cursor = conn.cursor()
+        
+        # 创建反馈表
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS feedbacks (
+                id VARCHAR(32) PRIMARY KEY,
+                type VARCHAR(20) DEFAULT 'bug',
+                title VARCHAR(255) NOT NULL,
+                description TEXT NOT NULL,
+                contact VARCHAR(255),
+                priority VARCHAR(20) DEFAULT 'normal',
+                status VARCHAR(20) DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # 创建脚本表
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS scripts (
+                id VARCHAR(32) PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                description TEXT,
+                category VARCHAR(50) DEFAULT 'other',
+                author VARCHAR(100) DEFAULT 'anonymous',
+                contact VARCHAR(255),
+                original_filename VARCHAR(255),
+                filename VARCHAR(255),
+                content TEXT,
+                status VARCHAR(20) DEFAULT 'pending',
+                reject_reason TEXT,
+                target_path VARCHAR(500),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                approved_at TIMESTAMP,
+                rejected_at TIMESTAMP
+            )
+        ''')
+        
+        conn.commit()
+        logger.info('PostgreSQL 数据库表初始化完成')
+        return True
+    except psycopg2.Error as e:
+        logger.error(f'数据库表初始化失败: {e}')
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+# 初始化数据库表
+init_pg_database()
+
+# ==========================================
+# 用户反馈与脚本上传 API
+# ==========================================
+
+SCRIPT_UPLOAD_DIR = os.path.join(WEBUI_DIR, 'data', 'uploads')
+os.makedirs(SCRIPT_UPLOAD_DIR, exist_ok=True)
+
+@app.route('/api/feedback', methods=['POST'])
+@handle_errors
+def submit_feedback():
+    """提交用户反馈/Bug报告"""
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'success': False, 'error': '无效的请求数据'}), 400
+    
+    feedback_type = data.get('type', 'bug')
+    title = data.get('title', '').strip()
+    description = data.get('description', '').strip()
+    contact = data.get('contact', '').strip()
+    priority = data.get('priority', 'normal')
+    
+    if not title:
+        return jsonify({'success': False, 'error': '标题不能为空'}), 400
+    
+    if not description:
+        return jsonify({'success': False, 'error': '描述不能为空'}), 400
+    
+    import uuid
+    feedback_id = str(uuid.uuid4())[:8]
+    
+    with get_db_cursor() as cursor:
+        if cursor is None:
+            return jsonify({'success': False, 'error': '数据库连接失败'}), 500
+        
+        cursor.execute('''
+            INSERT INTO feedbacks (id, type, title, description, contact, priority, status)
+            VALUES (%s, %s, %s, %s, %s, %s, 'pending')
+        ''', (feedback_id, feedback_type, title, description, contact, priority))
+    
+    logger.info(f'收到用户反馈: {feedback_id} - {title}')
+    
+    return jsonify({
+        'success': True,
+        'message': '反馈提交成功，感谢您的反馈！',
+        'feedback_id': feedback_id
+    })
+
+@app.route('/api/feedback/list', methods=['GET'])
+@handle_errors
+def list_feedback():
+    """获取反馈列表"""
+    with get_db_cursor() as cursor:
+        if cursor is None:
+            return jsonify({'success': False, 'error': '数据库连接失败'}), 500
+        
+        cursor.execute('''
+            SELECT id, type, title, description, contact, priority, status, 
+                   created_at, updated_at
+            FROM feedbacks
+            ORDER BY created_at DESC
+        ''')
+        feedbacks = cursor.fetchall()
+        
+        return jsonify({
+            'success': True,
+            'data': [dict(row) for row in feedbacks]
+        })
+
+@app.route('/api/feedback/<feedback_id>', methods=['GET'])
+@handle_errors
+def get_feedback(feedback_id):
+    """获取反馈详情"""
+    with get_db_cursor() as cursor:
+        if cursor is None:
+            return jsonify({'success': False, 'error': '数据库连接失败'}), 500
+        
+        cursor.execute('''
+            SELECT id, type, title, description, contact, priority, status,
+                   created_at, updated_at
+            FROM feedbacks WHERE id = %s
+        ''', (feedback_id,))
+        feedback = cursor.fetchone()
+        
+        if feedback:
+            return jsonify({'success': True, 'data': dict(feedback)})
+        else:
+            return jsonify({'success': False, 'error': '反馈不存在'}), 404
+
+@app.route('/api/feedback/<feedback_id>/status', methods=['PUT'])
+@handle_errors
+def update_feedback_status(feedback_id):
+    """更新反馈状态"""
+    data = request.get_json()
+    new_status = data.get('status')
+    
+    if new_status not in ['pending', 'processing', 'resolved', 'closed']:
+        return jsonify({'success': False, 'error': '无效的状态'}), 400
+    
+    with get_db_cursor() as cursor:
+        if cursor is None:
+            return jsonify({'success': False, 'error': '数据库连接失败'}), 500
+        
+        cursor.execute('''
+            UPDATE feedbacks SET status = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        ''', (new_status, feedback_id))
+        
+        if cursor.rowcount > 0:
+            logger.info(f'反馈 {feedback_id} 状态更新为: {new_status}')
+            return jsonify({'success': True, 'message': '状态更新成功'})
+        else:
+            return jsonify({'success': False, 'error': '反馈不存在'}), 404
+
+@app.route('/api/scripts/upload', methods=['POST'])
+@handle_errors
+def upload_script():
+    """上传用户脚本"""
+    import uuid
+    
+    script_name = request.form.get('name', '').strip()
+    script_description = request.form.get('description', '').strip()
+    script_category = request.form.get('category', 'other').strip()
+    author = request.form.get('author', 'anonymous').strip()
+    contact = request.form.get('contact', '').strip()
+    
+    if not script_name:
+        return jsonify({'success': False, 'error': '脚本名称不能为空'}), 400
+    
+    if 'script' not in request.files:
+        return jsonify({'success': False, 'error': '未上传脚本文件'}), 400
+    
+    file = request.files['script']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': '未选择文件'}), 400
+    
+    if not file.filename.endswith('.sh'):
+        return jsonify({'success': False, 'error': '只支持 .sh 脚本文件'}), 400
+    
+    # 读取脚本内容
+    script_content = file.read().decode('utf-8', errors='ignore')
+    
+    script_id = str(uuid.uuid4())[:8]
+    
+    with get_db_cursor() as cursor:
+        if cursor is None:
+            return jsonify({'success': False, 'error': '数据库连接失败'}), 500
+        
+        cursor.execute('''
+            INSERT INTO scripts (id, name, description, category, author, contact,
+                               original_filename, content, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'pending')
+        ''', (script_id, script_name, script_description, script_category,
+              author, contact, file.filename, script_content))
+    
+    logger.info(f'收到脚本上传: {script_name} ({script_id})')
+    
+    return jsonify({
+        'success': True,
+        'message': '脚本上传成功，等待审核',
+        'script_id': script_id
+    })
+
+@app.route('/api/scripts/pending', methods=['GET'])
+@handle_errors
+def list_pending_scripts():
+    """获取待审核脚本列表"""
+    with get_db_cursor() as cursor:
+        if cursor is None:
+            return jsonify({'success': False, 'error': '数据库连接失败'}), 500
+        
+        cursor.execute('''
+            SELECT id, name, description, category, author, contact,
+                   original_filename, status, created_at, updated_at
+            FROM scripts
+            ORDER BY created_at DESC
+        ''')
+        scripts = cursor.fetchall()
+        
+        return jsonify({
+            'success': True,
+            'data': [dict(row) for row in scripts]
+        })
+
+@app.route('/api/scripts/<script_id>/approve', methods=['POST'])
+@handle_errors
+def approve_script(script_id):
+    """审核通过脚本"""
+    import shutil
+    
+    with get_db_cursor() as cursor:
+        if cursor is None:
+            return jsonify({'success': False, 'error': '数据库连接失败'}), 500
+        
+        cursor.execute('SELECT * FROM scripts WHERE id = %s', (script_id,))
+        script = cursor.fetchone()
+        
+        if not script:
+            return jsonify({'success': False, 'error': '脚本不存在'}), 404
+        
+        script_name = script['name']
+        
+        # 创建目标目录
+        target_dir = os.path.join(SCRIPT_DIR, script_name)
+        os.makedirs(target_dir, exist_ok=True)
+        
+        # 写入脚本文件
+        target_script = os.path.join(target_dir, 'install.sh')
+        with open(target_script, 'w', encoding='utf-8') as f:
+            f.write(script['content'])
+        os.chmod(target_script, 0o755)
+        
+        # 更新数据库状态
+        cursor.execute('''
+            UPDATE scripts 
+            SET status = 'approved', approved_at = CURRENT_TIMESTAMP,
+                target_path = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        ''', (target_script, script_id))
+        
+        logger.info(f'脚本审核通过: {script_name} ({script_id}) -> {target_script}')
+        
+        return jsonify({
+            'success': True,
+            'message': f'脚本已审核通过并安装到 {target_dir}'
+        })
+
+@app.route('/api/scripts/<script_id>/reject', methods=['POST'])
+@handle_errors
+def reject_script(script_id):
+    """拒绝脚本"""
+    data = request.get_json() or {}
+    reason = data.get('reason', '未提供原因')
+    
+    with get_db_cursor() as cursor:
+        if cursor is None:
+            return jsonify({'success': False, 'error': '数据库连接失败'}), 500
+        
+        cursor.execute('''
+            UPDATE scripts 
+            SET status = 'rejected', rejected_at = CURRENT_TIMESTAMP,
+                reject_reason = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        ''', (reason, script_id))
+        
+        if cursor.rowcount > 0:
+            logger.info(f'脚本已拒绝: {script_id} - {reason}')
+            return jsonify({'success': True, 'message': '脚本已拒绝'})
+        else:
+            return jsonify({'success': False, 'error': '脚本不存在'}), 404
+
+@app.route('/api/scripts/<script_id>/content', methods=['GET'])
+@handle_errors
+def get_script_content(script_id):
+    """获取脚本内容"""
+    with get_db_cursor() as cursor:
+        if cursor is None:
+            return jsonify({'success': False, 'error': '数据库连接失败'}), 500
+        
+        cursor.execute('''
+            SELECT id, name, description, category, author, contact,
+                   original_filename, status, content, created_at
+            FROM scripts WHERE id = %s
+        ''', (script_id,))
+        script = cursor.fetchone()
+        
+        if script:
+            return jsonify({'success': True, 'data': dict(script)})
+        else:
+            return jsonify({'success': False, 'error': '脚本不存在'}), 404
 
 # 主程序入口
 # ==========================================

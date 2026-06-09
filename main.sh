@@ -10,6 +10,103 @@ set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# =========================================
+# 命令检查与自动安装
+# =========================================
+
+# 定义需要检查的命令列表
+REQUIRED_COMMANDS=(
+    "grep"
+    "awk"
+    "sed"
+    "curl"
+    "wget"
+    "tar"
+    "unzip"
+    "git"
+    "bc"
+    "hostname"
+    "date"
+    "cat"
+    "echo"
+    "mkdir"
+    "rm"
+    "cp"
+    "mv"
+    "chmod"
+    "chown"
+)
+
+check_and_install_command() {
+    local cmd=$1
+    if ! command -v "$cmd" &>/dev/null; then
+        echo -e "[${YELLOW}WARN${NC}] 命令 $cmd 未找到，正在安装..."
+        
+        # 检查操作系统
+        if [ -f /etc/centos-release ] || [ -f /etc/redhat-release ]; then
+            # CentOS/RHEL
+            if [ -x "$(command -v dnf)" ]; then
+                dnf install -y "$cmd"
+            else
+                yum install -y "$cmd"
+            fi
+        elif [ -f /etc/debian_version ] || [ -f /etc/lsb-release ]; then
+            # Ubuntu/Debian
+            apt update -y && apt install -y "$cmd"
+        else
+            echo -e "[${RED}ERROR${NC}] 无法识别操作系统，无法自动安装 $cmd"
+            return 1
+        fi
+        
+        if command -v "$cmd" &>/dev/null; then
+            echo -e "[${GREEN}OK${NC}] $cmd 安装成功"
+        else
+            echo -e "[${RED}ERROR${NC}] $cmd 安装失败，请手动安装"
+            return 1
+        fi
+    fi
+}
+
+# 检查所有必需命令
+check_prerequisite_commands() {
+    echo -e "[${BLUE}INFO${NC}] 正在检查必需命令..."
+    local failed=0
+    
+    for cmd in "${REQUIRED_COMMANDS[@]}"; do
+        check_and_install_command "$cmd" || failed=$((failed + 1))
+    done
+    
+    if [ $failed -gt 0 ]; then
+        echo -e "[${RED}ERROR${NC}] 有 $failed 个命令安装失败，请检查"
+        exit 1
+    fi
+    
+    echo -e "[${GREEN}OK${NC}] 所有必需命令检查通过"
+}
+
+# =========================================
+# 一键换源函数
+# =========================================
+
+quick_mirror() {
+    local mirror=${1:-aliyun}
+    
+    echo -e "[${BLUE}INFO${NC}] 正在执行一键换源，目标源: $mirror"
+    
+    # 检查并执行换源脚本
+    if [ -f "$SCRIPT_DIR/mirror/mirror.sh" ]; then
+        bash "$SCRIPT_DIR/mirror/mirror.sh" "$mirror"
+        if [ $? -eq 0 ]; then
+            echo -e "[${GREEN}OK${NC}] 一键换源完成"
+        else
+            echo -e "[${RED}ERROR${NC}] 一键换源失败"
+        fi
+    else
+        echo -e "[${RED}ERROR${NC}] 换源脚本未找到: $SCRIPT_DIR/mirror/mirror.sh"
+        exit 1
+    fi
+}
+
 if [ -f "$SCRIPT_DIR/lib/common.sh" ]; then
     source "$SCRIPT_DIR/lib/common.sh"
 fi
@@ -88,7 +185,7 @@ ${YELLOW}运维工具：${NC}
   backup            备份数据库
   cleanup           系统清理
   tune-kernel       内核调优
-  mirror [源]       设置镜像源
+  mirror [源]       一键换源 (默认: aliyun, 支持: aliyun/tuna/163/ustc/huawei)
   firewall          防火墙管理
 
 ${YELLOW}大数据组件:${NC}
@@ -485,6 +582,11 @@ main() {
     local command=$1
     shift
     
+    # 在执行任何命令之前检查必需命令（除了 help 命令）
+    if [ "$command" != "help" ] && [ "$command" != "--help" ] && [ "$command" != "-h" ]; then
+        check_prerequisite_commands
+    fi
+    
     case $command in
         help|--help|-h)
             show_help
@@ -619,7 +721,7 @@ main() {
             install_software tune-kernel
             ;;
         mirror)
-            install_software mirror "$@"
+            quick_mirror "$@"
             ;;
         firewall)
             install_software firewall "$@"
