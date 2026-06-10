@@ -186,7 +186,7 @@ do_all_full() {
     mongodb_backup "full"
     redis_backup "full"
     mariadb_backup "full"
-    sqlite_backup "backup"
+    sqlite_backup "full"
     elasticsearch_backup "full"
     influxdb_backup "full"
     

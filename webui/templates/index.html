@@ -995,6 +995,27 @@
         let minimizedTasks = {}; // task_id -> {title, status}
         let allSoftwareInfoData = [];
         let currentEditSoftware = null;
+
+        // 统一的 fetch 处理函数
+        async function api(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(options.headers || {})
+                    }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    console.error('API Error:', data.error || 'Request failed');
+                }
+                return data;
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                return { success: false, error: error.message };
+            }
+        }
         
         // 手机端菜单切换
         function toggleMobileMenu() {
@@ -1139,7 +1160,6 @@
             });
             
             loadServices();
-            loadSoftwareGrid();
             loadSoftwareInfo();
             loadLogOptions();
             loadHealthcheckOptions();
@@ -1314,27 +1334,6 @@
                             <td><span class="status-badge status-inactive">未安装</span></td>
                             <td>-</td>
                         </tr>`;
-                });
-            });
-        }
-        
-        function loadSoftwareGrid() {
-            fetch('/api/software/status').then(r => r.json()).then(data => {
-                const grid = document.getElementById('software-grid');
-                grid.innerHTML = '';
-                
-                data.slice(0, 8).forEach(item => {
-                    grid.innerHTML += `
-                        <div class="software-card">
-                            <div class="name">${item.name}</div>
-                            <div class="version">${item.version}</div>
-                            <div class="status">
-                                <span class="status-badge ${item.status === 'installed' ? 'status-active' : 'status-inactive'}">
-                                    ${item.status === 'installed' ? '已安装' : '未安装'}
-                                </span>
-                            </div>
-                        </div>
-                    `;
                 });
             });
         }

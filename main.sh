@@ -856,10 +856,12 @@ main() {
             bash "$SCRIPT_DIR/ops.sh" "$@"
             ;;
         webui)
+            # 获取 webui 后面的子命令和参数
+            shift
             if [ "$1" = "stop" ]; then
                 bash "$SCRIPT_DIR/webui/stop.sh"
             else
-                bash "$SCRIPT_DIR/webui/start.sh"
+                bash "$SCRIPT_DIR/webui/start.sh" "$@"
             fi
             ;;
         argo-cd)

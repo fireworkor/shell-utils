@@ -79,30 +79,6 @@ print_header() {
     echo -e "${CYAN}   运维工具 Web UI 管理${NC}"
     echo -e "${CYAN}========================================${NC}"
 }
-# 日志函数
-log_info() {
-    echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')] INFO: $1${NC}"
-}
-
-log_success() {
-    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] SUCCESS: $1${NC}"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: $1${NC}"
-}
-
-log_error() {
-    echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1${NC}"
-}
-
-# 打印头部
-print_header() {
-    echo ""
-    echo -e "${CYAN}========================================${NC}"
-    echo -e "${CYAN}   运维工具 Web UI 管理${NC}"
-    echo -e "${CYAN}========================================${NC}"
-}
 
 # 检测进程是否正在运行（通过命令行特征而不是仅PID）
 get_process_pid() {
